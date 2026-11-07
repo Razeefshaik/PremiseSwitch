@@ -3,7 +3,7 @@
 <h1>Premise × Switch</h1>
 
 <a href="‹VIDEO LINK›"><img src="docs/media/switch-banner.png" alt="Premise × Switch: your company's brain, in the chat" width="100%"></a>
-<br><sub>Film title artwork; real Switch and Mattermost footage appears in the demos below.</sub>
+<br><sub>Light-theme Premise × Switch illustration; real Switch and Mattermost footage appears in the demos below.</sub>
 
 ### Switch keeps the log. Premise keeps the meaning.
 
@@ -24,7 +24,7 @@ It knows why, listens when things change, and checks what a change would break.
 <p>
   <a href="‹VIDEO LINK›"><img src="https://img.shields.io/badge/Watch_the_demo-Under_3_minutes-5b63ff?style=for-the-badge&labelColor=1b1f3d&logo=youtube&logoColor=white" alt="Watch the demo, under 3 minutes"></a>
   <a href="#the-switch-workflow"><img src="https://img.shields.io/badge/How_it_uses-Switch-ff6b8b?style=for-the-badge&labelColor=1b1f3d&logoColor=white" alt="The Premise × Switch workflow"></a>
-  <a href="#run-it-yourself"><img src="https://img.shields.io/badge/Run_it-Your_own_Switch-7cf0c8?style=for-the-badge&labelColor=1b1f3d&logo=docker&logoColor=black" alt="Run it yourself"></a>
+  <a href="#run-it-yourself"><img src="https://img.shields.io/badge/Run_it-Your_own_Switch-7cf0c8?style=for-the-badge&labelColor=1b1f3d&logo=docker&logoColor=white" alt="Run it yourself"></a>
   <a href="docs/blog/premise-switch.md"><img src="https://img.shields.io/badge/Read-The_build_story-ffd27a?style=for-the-badge&labelColor=1b1f3d&logo=devdotto&logoColor=white" alt="The build story"></a>
 </p>
 
@@ -36,6 +36,8 @@ It knows why, listens when things change, and checks what a change would break.
 <tr><td><a href="#see-it-at-kestrel">See it at Kestrel</a></td><td>Listen, Guard, Enforce and Remember in action.</td></tr>
 <tr><td><a href="#when-people-leave">When people leave</a></td><td>Departed owners, cited reasons and next reviewers.</td></tr>
 <tr><td><a href="#what-else-it-does">What else it does</a></td><td>Capabilities, architecture and build evidence.</td></tr>
+<tr><td><a href="#architecture">Architecture</a></td><td>The transport, reasoning and receipt path.</td></tr>
+<tr><td><a href="#the-evidence-against-each-judging-criterion">Judging criteria</a></td><td>Each claim mapped to repository evidence.</td></tr>
 <tr><td><a href="#whats-next">What's next</a></td><td>Business rules and stronger enforcement.</td></tr>
 <tr><td><a href="#run-it-yourself">Run it yourself</a></td><td>The tested setup, commands and checks.</td></tr>
 </tbody>
@@ -61,8 +63,8 @@ It knows what each promise rests on. A partner's resend policy constrains a conf
 Switch puts that brain where people and AI agents already work. Premise joins their rooms as a real Switch agent: it listens when reality changes, answers what-ifs, and gives a checked change a receipt that git can verify.
 
 <div align="center">
-<img src="docs/media/switch-brain.png" alt="What Premise × Switch reads and organises: decisions, policies, promises, people and their relations" width="100%">
-<br><sub>Film illustration of the company brain; the room demos below are real Switch and Mattermost footage.</sub>
+<img src="docs/media/switch-brain.gif" alt="Premise × Switch connects source material to the company brain" width="100%">
+<br><sub>Film excerpt: real Premise web-app footage with animated source labels; the Switch room recordings appear below.</sub>
 </div>
 
 > **No language model decides a Premise Switch verdict.** Every verdict is computed deterministically, and the listener runs with `llm_provider="none"`. The language models are the agents being guarded, not the guard. A down graph, an untracked fact or a failed check is reported as *unchecked*, never as a pass.
@@ -76,11 +78,16 @@ It hears the team (Listen), answers the agents (Guard), pages the right people t
 **Without Switch, the brain sits on a shelf. With Switch, it's in every conversation.**
 
 <div align="center">
-<img src="docs/media/switch-why.png" alt="People and agents share linked Switch rooms, with Premise × Switch listening and answering in each" width="100%">
-<br><sub>Film illustration of the Switch workflow; the Listen and Guard demos show real room footage.</sub>
+<img src="docs/media/switch-why.gif" alt="Premise × Switch is present in each linked room" width="100%">
+<br><sub>Animated illustration from the film; the Listen and Guard demos below show real Switch and Mattermost footage.</sub>
 </div>
 
 ### The Switch workflow
+
+<div align="center">
+<img src="docs/media/switch-flow.png" alt="Premise × Switch routes a room message through Switch and the company brain to a checked reply" width="100%">
+<br><sub>Light-theme protocol illustration, not chat footage; the room demos show the live integration.</sub>
+</div>
 
 | Switch feature | What Premise does with it | Where |
 | --- | --- | --- |
@@ -99,6 +106,11 @@ Every operation and argument Premise calls is checked against your live server b
 
 
 ## See it at Kestrel
+
+<div align="center">
+<img src="docs/media/switch-modes.png" alt="Premise × Switch: Listen, Guard, Enforce and Remember with example commands" width="100%">
+<br><sub>Illustrated commands and outputs, not a transcript; real room and terminal footage follows.</sub>
+</div>
 
 ### The story in 60 seconds
 
@@ -197,8 +209,8 @@ Ask `@premise why ADR-012, and who owns it now?` in a room. The live answer retu
 For the forward-looking question, **what if Anika leaves?**, open **Continuity in the underlying web app at `/continuity`**. It shows which promises lose their verification and who reviews next. This is an existing web-app feature, not a chat command.
 
 <div align="center">
-<img src="docs/media/switch-leave.png" alt="Departed accountable owners and the people who can review next" width="100%">
-<br><sub>Film illustration of ownership continuity; the cited chat answer is live, while departure simulation lives in the web app.</sub>
+<img src="docs/media/switch-leave.gif" alt="Premise × Switch retains the reasons; Continuity simulates a departure in the web app" width="100%">
+<br><sub>Real Continuity web-app footage from the film: what changes if Anika leaves, with the next reviewers.</sub>
 </div>
 
 ## What else it does
@@ -307,6 +319,11 @@ Premise existed before this hackathon: a decision graph on FalkorDB ([original p
 **How we built it:** a small team directing several Codex agents in parallel. Each worked on its own card against frozen interfaces in [`premise_switch/contracts.py`](premise_switch/contracts.py). Every branch was reviewed, tested on the server and merged. The cards' file boundaries, the merges and the fixes made in review are all visible in the history.
 
 ## What's next
+
+<div align="center">
+<img src="docs/media/switch-next.png" alt="Premise × Switch roadmap: business rules are next and not built yet" width="100%">
+<br><sub>Roadmap illustration, not footage: refund windows, pricing and partner terms are not implemented or tested.</sub>
+</div>
 
 **Business rules are next — not built yet.** A decision is a reason, an owner and a promise, so the same format fits business rules next: refund windows, pricing, partner terms. Those business-rule examples are roadmap ideas; they are not implemented or tested.
 
