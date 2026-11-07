@@ -23,6 +23,7 @@ ENTITY = re.compile(r"\b(?:ADR-\d{3}|[GA]_[A-Z_]+)\b", re.I)
 TARGET = r"[A-Za-z0-9_][A-Za-z0-9_.\-/]*(?:#[A-Za-z0-9_][A-Za-z0-9_.-]*)?"
 VALUE = r'''(?:"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|true\b|false\b|[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)'''
 ASSIGNMENT = re.compile(rf"({TARGET})\s*=\s*({VALUE})", re.I)
+OUTSIDE_QUOTES = re.compile(r'''("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(?<![\w@])@premise\b|`''', re.I)
 
 
 def _changes(text: str) -> list[dict[str, Any]]:
@@ -74,9 +75,9 @@ def _changes(text: str) -> list[dict[str, Any]]:
 def parse(text: str) -> Route:
     if not isinstance(text, str) or len(text) > 2000:
         raise ParseError("Use 1 to 2000 characters.")
-    text = re.sub(r"(?<![\w@])@premise\b", "", text, flags=re.I).strip()
-    # Agents often wrap commands in Markdown code spans.
-    text = text.replace("`", "").strip()
+    # Drop @premise mentions and Markdown backticks, which agents often wrap commands in, but
+    # only outside quoted values: a quoted scalar must reach the tool exactly as written.
+    text = OUTSIDE_QUOTES.sub(lambda m: m.group(1) or "", text).strip()
     if not text:
         raise ParseError("Supply a command or question.")
     if text.lower() == "help":

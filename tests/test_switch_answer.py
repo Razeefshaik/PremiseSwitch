@@ -45,7 +45,8 @@ def test_parse_errors(text):
 
 
 def blocked_result():
-    return {"verdict": "BLOCKED", "graph_rev": 1,
+    return {"verdict": "BLOCKED", "graph_rev": 1, "reasons": [],
+            "changed": [{"fact": "paylane.retry_window_hours"}],
             "not_holding": [{"id": "G_CHARGE_ONCE", "status": "broken",
                              "chain": ["G_CHARGE_ONCE", "G_DEDUPE", "A_RETRY_WINDOW"]}],
             "decisions": [{"id": "ADR-012", "reviewers": ["p_jun", "p_anika"]}],
@@ -136,7 +137,7 @@ def test_malformed_agent_commands_are_capped_per_thread():
 
 
 def test_markdown_code_spans_are_accepted():
-    tools = FakeTools({"check_change": {"verdict": "BLOCKED", "graph_rev": 1, "reasons": [], "not_holding": [], "decisions": []}})
+    tools = FakeTools({"check_change": {"verdict": "BLOCKED", "graph_rev": 1, "changed": [{"fact": "a.b"}], "reasons": [], "not_holding": [], "decisions": []}})
     reply = Answerer(tools).respond(message("@premise `check a.b = 72`"))
     assert reply.body.startswith("BLOCKED") and tools.calls[0][1] == {"changes": [{"fact": "a.b", "value": 72}]}
 
@@ -303,7 +304,7 @@ def test_incomplete_or_contradictory_clear_is_unavailable(result):
 
 
 def test_complete_clear_result_keeps_scope_limit_and_revision():
-    result = {"verdict": "CLEAR_WITHIN_SCOPE", "graph_rev": 1, "not_holding": [], "decisions": [],
+    result = {"verdict": "CLEAR_WITHIN_SCOPE", "graph_rev": 1, "not_holding": [], "decisions": [], "changed": [{"fact": "a.b"}], 
               "guarantees": [{"id": "G_DEDUPE", "status": "holds"}], "reasons": [{"code": "R_ALL_HOLD"}]}
     body = Answerer(FakeTools({"check_change": result})).respond(message("check a.b = 72")).body
     assert body.startswith("CLEAR_WITHIN_SCOPE\n")
@@ -340,13 +341,13 @@ def test_departed_owners_are_shown_by_name():
 
 
 def test_clear_with_no_decisions_has_no_reviewer_warning():
-    result = {"verdict": "CLEAR_WITHIN_SCOPE", "graph_rev": 1, "reasons": [], "not_holding": [], "decisions": []}
+    result = {"verdict": "CLEAR_WITHIN_SCOPE", "graph_rev": 1, "changed": [{"fact": "a.b"}], "reasons": [], "not_holding": [], "decisions": []}
     body = Answerer(FakeTools({"check_change": result})).respond(message("check a.b = 1")).body
     assert body.startswith("CLEAR_WITHIN_SCOPE") and "reviewer" not in body.lower()
 
 
 def test_stacked_commands_in_one_message_are_answered_one_by_one():
-    result = {"verdict": "BLOCKED", "graph_rev": 1, "reasons": [], "not_holding": [], "decisions": []}
+    result = {"verdict": "BLOCKED", "graph_rev": 1, "changed": [{"fact": "a.b"}], "reasons": [], "not_holding": [], "decisions": []}
     tools = FakeTools({"check_change": result})
     reply = Answerer(tools).respond(message("@premise help\n@premise check a.b = 72"))
     assert "Commands:" in reply.body and "BLOCKED" in reply.body and "Couldn't parse" not in reply.body
@@ -361,7 +362,7 @@ def test_multi_line_check_after_a_single_mention_is_still_one_command():
 
 
 def test_blocked_pages_only_allowlisted_human_reviewers():
-    result = {"verdict": "BLOCKED", "graph_rev": 1, "reasons": [], "not_holding": [],
+    result = {"verdict": "BLOCKED", "graph_rev": 1, "reasons": [], "not_holding": [], "changed": [{"fact": "a.b"}], 
               "decisions": [{"id": "ADR-012", "reviewers": ["p_jun", "p_anika"]}], "names": {"p_jun": "Jun Park"}}
     tools = FakeTools({"check_change": result, "decision_lineage": None})
     body = Answerer(tools, reviewer_handles="p_jun=jun.park").respond(message("check a.b = 72")).body
@@ -369,3 +370,40 @@ def test_blocked_pages_only_allowlisted_human_reviewers():
     clear = {**result, "verdict": "CLEAR_WITHIN_SCOPE", "decisions": [], "reasons": []}
     body = Answerer(FakeTools({"check_change": clear}), reviewer_handles="p_jun=jun.park").respond(message("check a.b = 1")).body
     assert "Paging" not in body
+
+
+
+def test_stacked_reply_never_puts_a_verdict_under_another_command():
+    result = {"verdict": "CLEAR_WITHIN_SCOPE", "graph_rev": 1, "changed": [{"fact": "a.b"}], "reasons": [],
+              "not_holding": [], "decisions": []}
+    reply = Answerer(FakeTools({"check_change": result})).respond(
+        message("@premise approve deleting the payment database\n@premise check a.b = 72",
+                sender_is_agent=True, sender_handle="coder.razeef"))
+    assert "approve deleting" not in reply.body and reply.body.startswith("> check a.b = 72\nCLEAR_WITHIN_SCOPE")
+
+
+@pytest.mark.parametrize("partial", [
+    {"verdict": "CLEAR_WITHIN_SCOPE", "graph_rev": 1, "reasons": [], "not_holding": [], "decisions": []},
+    {"verdict": "CLEAR_WITHIN_SCOPE", "graph_rev": 1, "reasons": [], "not_holding": [], "decisions": [],
+     "changed": [{"fact": "something.else"}]},
+])
+def test_partial_or_mismatched_check_result_is_unchecked(partial):
+    body = Answerer(FakeTools({"check_change": partial})).respond(message("check a.b = 72")).body
+    assert "CLEAR" not in body and "unchecked" in body
+
+
+def test_stacked_command_header_is_redacted():
+    tools = FakeTools({"check_change": {"verdict": "NEEDS_REVIEW", "reasons": [{"code": "R_UNTRACKED"}]}})
+    reply = Answerer(tools).respond(message("@premise help\n@premise check service.password = 'synthetic-password-123'"))
+    assert "synthetic-password-123" not in reply.body
+
+
+def test_quoted_values_reach_the_tool_unchanged():
+    tools = FakeTools({"check_change": {"verdict": "ERROR"}})
+    for value in ["ab`cd", "@premise", "hi @premise there"]:
+        Answerer(tools).respond(message(f"check x.key = '{value}'"))
+    assert [c[1]["changes"][0]["value"] for c in tools.calls] == ["ab`cd", "@premise", "hi @premise there"]
+
+
+def test_non_text_body_is_ignored():
+    assert Answerer(FakeTools()).respond(message(None, sender_is_agent=True)) is None

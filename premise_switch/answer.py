@@ -9,6 +9,8 @@ import time
 from typing import Any, Callable
 
 from .contracts import InboundMessage, Reply, ToolBackend
+from premise_v2.gateway import redact
+
 from .extras import reviewer_mentions
 from .format import HELP, UNAVAILABLE, escape, format_check, format_result
 from .router import ParseError, Route, parse
@@ -22,6 +24,19 @@ STOPWORDS = frozenset("""a about all am an and any are as at be been but by can 
     have how i if in is it its me my of on or our please should so tell than that the their them then there these
     they this to us was we were what when where which who whom whose why will with would you your knows owns owner
     own review""".split())
+
+
+def _assessed_what_was_asked(route: Route, result: Any) -> bool:
+    """A check result must be complete, and must cover every fact the command named."""
+    if not isinstance(result, dict) or result.get("verdict") not in {"BLOCKED", "NEEDS_REVIEW", "CLEAR_WITHIN_SCOPE"}:
+        return True  # ERROR and odd verdicts are already rendered as unchecked by format_check.
+    if any(r.get("code") == "R_UNTRACKED" for r in result.get("reasons", []) if isinstance(r, dict)):
+        return True  # Untracked facts are reported as unchecked by format_check.
+    if any(not isinstance(result.get(k), list) for k in ("reasons", "not_holding", "decisions", "changed")):
+        return False
+    asked = {c["fact"] for c in route.arguments.get("changes", []) if "fact" in c}
+    assessed = {c.get("fact") for c in result["changed"] if isinstance(c, dict)}
+    return bool(result["changed"]) and asked <= assessed
 
 
 def content_terms(query: str) -> str:
@@ -79,6 +94,9 @@ class Answerer:
         if route.name == "help":
             return escape(HELP + "\ndeterministic")
         name, result = self._execute(route)
+        if name == "check_change" and result and not _assessed_what_was_asked(route, result):
+            # A partial or mismatched result must not render as a verdict, least of all CLEAR.
+            return escape(UNAVAILABLE)
         if name == "check_change" and result:
             # R_UNTRACKED must be handled before enrichment, including mixed checks.
             if any(reason.get("code") == "R_UNTRACKED" for reason in result.get("reasons", [])):
@@ -136,19 +154,26 @@ class Answerer:
 
     def respond(self, message: InboundMessage) -> Reply | None:
         """Answer each `@premise` line of a message separately: people often stack commands."""
-        if not message.addressed:
-            return None
-        parts = [p.strip() for p in re.split(r"(?im)^[ \t]*@premise\b", message.body) if p.strip()]
-        if len(parts) < 2:
-            return self._respond_one(message)
-        if len(parts) > MAX_COMMANDS:
-            parts = parts[:MAX_COMMANDS]
-        replies = [r for r in (self._respond_one(replace(message, body=p)) for p in parts) if r is not None]
-        if not replies:
-            return None
-        # Each section is already escaped. The quoted command shows which answer is which.
-        body = "\n\n".join(f"> {escape(p.splitlines()[0][:120])}\n{r.body}" for p, r in zip(parts, replies))
-        return Reply(body, replies[0].thread_id, replies[0].mention)
+        try:
+            if not message.addressed or not isinstance(message.body, str):
+                return None
+            parts = [p.strip() for p in re.split(r"(?im)^[ \t]*@premise\b", message.body) if p.strip()]
+            if len(parts) < 2:
+                return self._respond_one(message)
+            # Keep each command with its own reply: a CLEAR must never sit under another command.
+            pairs = [(p, r) for p in parts[:MAX_COMMANDS]
+                     if (r := self._respond_one(replace(message, body=p))) is not None]
+            if not pairs:
+                return None
+            # Each section is already escaped; the header is redacted and escaped too.
+            body = "\n\n".join(f"> {escape(redact(p.splitlines()[0][:120])[0])}\n{r.body}" for p, r in pairs)
+            return Reply(body, pairs[0][1].thread_id, pairs[0][1].mention)
+        except Exception:
+            # People still hear that nothing was checked. Agents get silence, which keeps the
+            # per-thread cap meaningful.
+            if getattr(message, "sender_is_agent", True):
+                return None
+            return Reply(UNAVAILABLE, message.thread_id or message.message_id)
 
     def _respond_one(self, message: InboundMessage) -> Reply | None:
         """Never propagate tool/parser/formatter failures or echo exception details."""
