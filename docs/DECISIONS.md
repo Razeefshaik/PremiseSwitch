@@ -83,3 +83,10 @@ One row per design change, with its reason. Add a dated section per batch of wor
 | Decision | By | Status | Reason |
 | --- | --- | --- | --- |
 | Refreeze `extract/__init__.py`, `identity.py` and `entities.py` in `fixtures/v2/gold/recordings/freeze.json` | Claude | Accept | C04 changed them on purpose: whole-message injection taint, and `switch` as a source. They weren't tuned on holdout data. `premise-v2 eval --gold` re-run on 2026-11-07 after the change: no floor failures, and the replay test still requires zero injected grounded candidates |
+
+## 2026-11-07 C06 clearance
+
+- Sign canonical JSON with Ed25519 and encode both payload and signature as unpadded base64url, so the receipt contains no mentions and exact file/key/value changes are authenticated.
+- Resolve every changed fact through the server's `facts.yaml`; missing mappings, contradictory CLEAR results, duplicate targets and invalid values produce no receipt instead of guessing scope.
+- Represent deletion as `value: {"$delete": true}` to distinguish it from a staged YAML null; verification compares canonical JSON to preserve boolean/number/string distinctions.
+- Store the private key only in `SWITCH_STATE_DIR/clearance.key`, created exclusively and chmod 600; reuse existing Ed25519 keys without printing them or silently rotating malformed keys.
