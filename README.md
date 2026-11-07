@@ -1,39 +1,45 @@
 <div align="center">
 
+<h1>Premise × Switch</h1>
+
 <a href="‹VIDEO LINK›"><img src="docs/media/switch-banner.png" alt="Premise × Switch: your company's brain, in the chat" width="100%"></a>
 <br><sub>Film title artwork; real Switch and Mattermost footage appears in the demos below.</sub>
 
 ### Switch keeps the log. Premise keeps the meaning.
 
-**Premise is your company's brain, and Switch puts it in the chat.**
+**Premise × Switch brings your company's brain into every team conversation.**
 
 It knows why, listens when things change, and checks what a change would break.
 
-![Tests: 671 passing](https://img.shields.io/badge/tests-671%20passing-7cf0c8?style=flat&labelColor=030305)
-![Switch integration: 286 tests](https://img.shields.io/badge/Switch%20integration-286%20tests-5b63ff?style=flat&labelColor=030305)
-![switch-core 0.31.0](https://img.shields.io/badge/switch--core-0.31.0-5b63ff?style=flat&labelColor=030305)
-![FalkorDB 4.18.3](https://img.shields.io/badge/FalkorDB-4.18.3-5b63ff?style=flat&labelColor=030305)
-![LLM in answers: none](https://img.shields.io/badge/LLM%20in%20answers-none-030305?style=flat&labelColor=030305)
-![Receipts: Ed25519](https://img.shields.io/badge/receipts-Ed25519-5b63ff?style=flat&labelColor=030305)
-![Adversarial review: 8 of 9 fixed](https://img.shields.io/badge/adversarial%20review-8%2F9%20fixed-7cf0c8?style=flat&labelColor=030305)
-![Blocked stays blocked](https://img.shields.io/badge/verdict-BLOCKED-ff6b8b?style=flat&labelColor=030305)
-![Unknown stays unchecked](https://img.shields.io/badge/unknown-unchecked-ffd27a?style=flat&labelColor=030305)
+![Tests: 671 passing](https://img.shields.io/badge/tests-671%20passing-7cf0c8?style=flat&labelColor=1b1f3d)
+![Switch integration: 286 tests](https://img.shields.io/badge/Switch%20integration-286%20tests-5b63ff?style=flat&labelColor=1b1f3d)
+![switch-core 0.31.0](https://img.shields.io/badge/switch--core-0.31.0-5b63ff?style=flat&labelColor=1b1f3d)
+![FalkorDB 4.18.3](https://img.shields.io/badge/FalkorDB-4.18.3-5b63ff?style=flat&labelColor=1b1f3d)
+![LLM in answers: none](https://img.shields.io/badge/LLM%20in%20answers-none-5b63ff?style=flat&labelColor=1b1f3d)
+![Receipts: Ed25519](https://img.shields.io/badge/receipts-Ed25519-5b63ff?style=flat&labelColor=1b1f3d)
+![Adversarial review: 8 of 9 fixed](https://img.shields.io/badge/adversarial%20review-8%2F9%20fixed-7cf0c8?style=flat&labelColor=1b1f3d)
+![Blocked stays blocked](https://img.shields.io/badge/verdict-BLOCKED-ff6b8b?style=flat&labelColor=1b1f3d)
+![Unknown stays unchecked](https://img.shields.io/badge/unknown-unchecked-ffd27a?style=flat&labelColor=1b1f3d)
 
 <p>
-  <a href="‹VIDEO LINK›"><img src="https://img.shields.io/badge/Watch_the_demo-Under_3_minutes-5b63ff?style=for-the-badge&labelColor=030305&logo=youtube&logoColor=white" alt="Watch the demo, under 3 minutes"></a>
-  <a href="#how-premise-uses-switch"><img src="https://img.shields.io/badge/How_it_uses-Switch-5b63ff?style=for-the-badge&labelColor=030305&logoColor=white" alt="How Premise uses Switch"></a>
-  <a href="#run-it-yourself"><img src="https://img.shields.io/badge/Run_it-Your_own_Switch-7cf0c8?style=for-the-badge&labelColor=030305&logo=docker&logoColor=black" alt="Run it yourself"></a>
-  <a href="docs/blog/premise-switch.md"><img src="https://img.shields.io/badge/Read-The_build_story-030305?style=for-the-badge&labelColor=030305&logo=devdotto&logoColor=white" alt="The build story"></a>
+  <a href="‹VIDEO LINK›"><img src="https://img.shields.io/badge/Watch_the_demo-Under_3_minutes-5b63ff?style=for-the-badge&labelColor=1b1f3d&logo=youtube&logoColor=white" alt="Watch the demo, under 3 minutes"></a>
+  <a href="#the-switch-workflow"><img src="https://img.shields.io/badge/How_it_uses-Switch-ff6b8b?style=for-the-badge&labelColor=1b1f3d&logoColor=white" alt="The Premise × Switch workflow"></a>
+  <a href="#run-it-yourself"><img src="https://img.shields.io/badge/Run_it-Your_own_Switch-7cf0c8?style=for-the-badge&labelColor=1b1f3d&logo=docker&logoColor=black" alt="Run it yourself"></a>
+  <a href="docs/blog/premise-switch.md"><img src="https://img.shields.io/badge/Read-The_build_story-ffd27a?style=for-the-badge&labelColor=1b1f3d&logo=devdotto&logoColor=white" alt="The build story"></a>
 </p>
 
-<p>
-  <a href="#the-company-brain">The company brain</a> ·
-  <a href="#why-it-only-works-on-switch">Why Switch</a> ·
-  <a href="#see-it-at-kestrel">See it at Kestrel</a> ·
-  <a href="#architecture">Architecture</a> ·
-  <a href="#the-evidence-against-each-judging-criterion">Judging criteria</a> ·
-  <a href="#run-it-yourself">Run it</a>
-</p>
+<table>
+<thead><tr><th>Section</th><th>What you’ll see</th></tr></thead>
+<tbody>
+<tr><td><a href="#the-company-brain">The company brain</a></td><td>What the company knows, and how it connects.</td></tr>
+<tr><td><a href="#why-it-only-works-on-switch">Why it only works on Switch</a></td><td>People, agents and decisions in shared rooms.</td></tr>
+<tr><td><a href="#see-it-at-kestrel">See it at Kestrel</a></td><td>Listen, Guard, Enforce and Remember in action.</td></tr>
+<tr><td><a href="#when-people-leave">When people leave</a></td><td>Departed owners, cited reasons and next reviewers.</td></tr>
+<tr><td><a href="#what-else-it-does">What else it does</a></td><td>Capabilities, architecture and build evidence.</td></tr>
+<tr><td><a href="#whats-next">What's next</a></td><td>Business rules and stronger enforcement.</td></tr>
+<tr><td><a href="#run-it-yourself">Run it yourself</a></td><td>The tested setup, commands and checks.</td></tr>
+</tbody>
+</table>
 
 <sub>Built for <b>Flip the Switch</b> by WeMakeDevs × Switch · Track 1: Best Business Workflow</sub>
 
@@ -48,14 +54,14 @@ It knows why, listens when things change, and checks what a change would break.
 
 ## The company brain
 
-**Premise reads decisions, policies, promises to customers, partner deals, config, tickets, chat, and the people behind them.** It organises decisions, policies, promises, people and their relations, so the team can ask why something exists, who knows about it, and what a change would affect.
+**Premise × Switch connects decisions, policies, promises to customers, partner deals, config, tickets, chat, and the people behind them.** It organises decisions, policies, promises, people and their relations, so the team can ask why something exists, who knows about it, and what a change would affect.
 
 It knows what each promise rests on. A partner's resend policy constrains a config value; a decision explains why that value matters; a person owns the reasoning. Premise brings those connections together instead of making the next teammate reconstruct them.
 
 Switch puts that brain where people and AI agents already work. Premise joins their rooms as a real Switch agent: it listens when reality changes, answers what-ifs, and gives a checked change a receipt that git can verify.
 
 <div align="center">
-<img src="docs/media/switch-brain.png" alt="What Premise reads and organises: decisions, policies, promises, people and their relations" width="100%">
+<img src="docs/media/switch-brain.png" alt="What Premise × Switch reads and organises: decisions, policies, promises, people and their relations" width="100%">
 <br><sub>Film illustration of the company brain; the room demos below are real Switch and Mattermost footage.</sub>
 </div>
 
@@ -70,11 +76,11 @@ It hears the team (Listen), answers the agents (Guard), pages the right people t
 **Without Switch, the brain sits on a shelf. With Switch, it's in every conversation.**
 
 <div align="center">
-<img src="docs/media/switch-why.png" alt="People and agents share linked Switch rooms, with Premise listening and answering in each" width="100%">
+<img src="docs/media/switch-why.png" alt="People and agents share linked Switch rooms, with Premise × Switch listening and answering in each" width="100%">
 <br><sub>Film illustration of the Switch workflow; the Listen and Guard demos show real room footage.</sub>
 </div>
 
-### How Premise uses Switch
+### The Switch workflow
 
 | Switch feature | What Premise does with it | Where |
 | --- | --- | --- |
@@ -127,7 +133,7 @@ Verdict preview: BLOCKED.
 
 
 <div align="center">
-<img src="docs/media/switch-listen.gif" alt="In the payments room, two people report the new retry window, an injection is posted, and Premise proposes the update with two origins and the injection ignored" width="100%">
+<img src="docs/media/switch-listen.gif" alt="In the payments room, two people report the new retry window, an injection is posted, and Premise × Switch proposes the update with two origins and the injection ignored" width="100%">
 <br><sub>Real Switch and Mattermost footage: two independent reports, one ignored injection and a proposal.</sub>
 </div>
 
@@ -158,7 +164,7 @@ deterministic · graph rev 1
 
 
 <div align="center">
-<img src="docs/media/switch-guard.gif" alt="Premise blocks the retry change, then clears the complete fix" width="100%">
+<img src="docs/media/switch-guard.gif" alt="Premise × Switch blocks the retry change, then clears the complete fix" width="100%">
 <br><sub>Real Switch and Mattermost footage: BLOCKED, the coder's explanation and the complete fix checked.</sub>
 </div>
 
@@ -188,7 +194,7 @@ The repo holds only the public key, so an agent with repo access can't forge a r
 
 Ask `@premise why ADR-012, and who owns it now?` in a room. The live answer returns the decision's lineage and sources, flags that both accountable owners, **Lena Fischer and Marco Ruiz**, have left, and lists reviewers. Suggesting a reviewer never silently appoints a new owner.
 
-For the forward-looking question, **what if Anika leaves?**, open **Continuity in the Premise web app at `/continuity`**. It shows which promises lose their verification and who reviews next. This is an existing web-app feature, not a chat command.
+For the forward-looking question, **what if Anika leaves?**, open **Continuity in the underlying web app at `/continuity`**. It shows which promises lose their verification and who reviews next. This is an existing web-app feature, not a chat command.
 
 <div align="center">
 <img src="docs/media/switch-leave.png" alt="Departed accountable owners and the people who can review next" width="100%">
@@ -197,7 +203,7 @@ For the forward-looking question, **what if Anika leaves?**, open **Continuity i
 
 ## What else it does
 
-The company brain existed before this hackathon. The Switch integration brings it into team conversations; the existing Premise app also offers:
+Built on **Premise**, our earlier company brain; this repo adds the Switch agent, room listening, checked replies and signed receipts. The underlying web app also offers:
 
 | Feature | Where it helps |
 | --- | --- |
@@ -276,7 +282,7 @@ sequenceDiagram
 
 | Criterion | What is demonstrated | Evidence |
 | --- | --- | --- |
-| **Use of Switch** (30%) | A custom agent over the agent protocol: per-room WebSockets, threads, targeted mentions, linked rooms, room documents, room join, a group template, the Mattermost bridge. Every move happens in a room | [How it uses Switch](#how-premise-uses-switch), [`premise_switch/client.py`](premise_switch/client.py), [protocol notes](docs/SWITCH_PROTOCOL.md) |
+| **Use of Switch** (30%) | A custom agent over the agent protocol: per-room WebSockets, threads, targeted mentions, linked rooms, room documents, room join, a group template, the Mattermost bridge. Every move happens in a room | [How it uses Switch](#the-switch-workflow), [`premise_switch/client.py`](premise_switch/client.py), [protocol notes](docs/SWITCH_PROTOCOL.md) |
 | **Technical execution** (25%) | 671 tests pass, 286 of them for the Switch integration, against a fake Switch server that speaks the WebSocket protocol and rejects undocumented arguments. The gold evaluation has **0 gold floor failures**. An adversarial review found 9 issues; 8 are fixed with regression tests. The setup below was followed literally in a fresh clone | [Testing](#testing), [review](docs/reviews/C08-2026-11-07.md), [`doctor`](premise_switch/doctor.py) |
 | **Creativity and impact** (25%) | Context that stops at the room's edge, carried across rooms. Agents stopped *before* they break a guarantee, with the owner paged. Verdicts become receipts that git enforces | [The story](#see-it-at-kestrel), [Enforce](#enforce) |
 | **Presentation** (20%) | The demo video shows each Switch feature at work, and this README maps every feature to its code | [Demo video](‹VIDEO LINK›), [build story](docs/blog/premise-switch.md), [walkthrough](docs/WALKTHROUGH.md) |
@@ -320,7 +326,7 @@ Tested on Ubuntu 24.04 with Switch Console 0.40.1 and `switch-core` 0.31.0, with
 2. In Mattermost, select **This is me** for your account, so your agents recognise you as their owner.
 3. In the Gateway, open **API Keys** and create a key of type **registration**. Agents registered with it are owned by you.
 
-### 2. Premise and the adapter
+### 2. Premise × Switch and the adapter
 On the host where the Switch server runs:
 
 ```bash
@@ -463,7 +469,7 @@ After the build, a separate review tried to break the finished code. It found ni
 - [`docs/SWITCH_PROTOCOL.md`](docs/SWITCH_PROTOCOL.md): the Switch protocol as we found it on the live server.
 - [`docs/DECISIONS.md`](docs/DECISIONS.md): every design choice and its reason.
 - [`docs/blog/premise-switch.md`](docs/blog/premise-switch.md): the build story.
-- [`docs/PREMISE_ORIGINAL.md`](docs/PREMISE_ORIGINAL.md): the original Premise README.
+- [`docs/PREMISE_ORIGINAL.md`](docs/PREMISE_ORIGINAL.md): the pre-hackathon feature reference.
 
 <div align="center">
 <br>
