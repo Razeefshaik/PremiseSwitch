@@ -77,3 +77,9 @@ One row per design change, with its reason. Add a dated section per batch of wor
 - Two people sharing a thread produce one origin (`observed`) and no notice; independent demo evidence needs separate top-level messages, as the existing reconciliation rule intends.
 - Reviewed identity rows use `links: [{account: "switch:<payload.sender>", person: p_anika, status: confirmed}]`; the account is global to the sender and the person must already exist in the model, so no sandbox edit or display-name guess is needed here.
 - Compatibility validation from the same S: clone through port 6381: `python -m pytest -q tests/test_v2_pipeline.py tests/test_v2_identity.py` reports `43 passed in 905.11s`; the full suite and `premise-v2 eval --gold` are deferred to Claude's VM review as the card addendum requires, and no gold data was changed.
+
+## 2026-11-07 Gold freeze after C04
+
+| Decision | By | Status | Reason |
+| --- | --- | --- | --- |
+| Refreeze `extract/__init__.py`, `identity.py` and `entities.py` in `fixtures/v2/gold/recordings/freeze.json` | Claude | Accept | C04 changed them on purpose: whole-message injection taint, and `switch` as a source. They weren't tuned on holdout data. `premise-v2 eval --gold` re-run on 2026-11-07 after the change: no floor failures, and the replay test still requires zero injected grounded candidates |
