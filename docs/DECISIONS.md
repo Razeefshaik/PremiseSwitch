@@ -24,3 +24,4 @@ One row per design change, with its reason. Add a dated section per batch of wor
 ## 2026-11-07 C04 listen
 
 - E2 marks every claim in a message as `instruction` when its full body matches `INSTRUCTION`; three failing regression cases reproduced the cross-sentence gap before the fix.
+- Switch messages use the existing chat gateway and account mappings; reconciliation and challenges already handle chat roots/replies generically, so their source-specific Jira logic needs no change.

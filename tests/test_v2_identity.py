@@ -14,6 +14,30 @@ def ready(r, new_graph, stream_name, model=None):
     return p
 
 
+def test_switch_accounts_use_sender_id_and_reviewed_links(r, new_graph, stream_name, repo_copy):
+    from premise_v2.entities import EntityCatalog
+    from premise_v2.identity import account_of
+    from premise_v2.normalize import IdentityResolver
+    from premise_v2.registry import Ext
+
+    path = repo_copy / "ext/identities.yaml"
+    doc = yaml.safe_load(path.read_text())
+    doc["people"]["p_anika"]["switch"] = "participant-anika"
+    doc["links"] = [{"account": "switch:participant-alias", "person": "p_anika", "status": "confirmed"}]
+    path.write_text(yaml.safe_dump(doc), encoding="utf-8")
+    p = ready(r, new_graph, stream_name, repo_copy)
+    message = env("Paylane now retries for 72 hours.").model_copy(update={
+        "source": "switch", "entity_key": "switch:payments:m1", "native_id": "payments:m1",
+        "author": AuthorRef(source_user_id="participant-alias")})
+    assert account_of(message) == "switch:participant-alias"
+    p.handle(message)
+    p.identities.sync()
+    assert p.identities.person_map()["switch:participant-alias"] == "p_anika"
+    direct = message.model_copy(update={"author": AuthorRef(source_user_id="participant-anika")})
+    assert IdentityResolver(Ext.load(repo_copy)).resolve(direct).person == "p_anika"
+    assert EntityCatalog(p.decision, repo_copy).resolves("switch:participant-anika", "p_anika")
+
+
 def test_fuzzy_proposal_does_not_merge_accounts_and_bridge_is_individual(r, new_graph, stream_name):
     p = ready(r, new_graph, stream_name)
     p.handle(env("Paylane now retries for 72 hours.", user="U01ANIKA"))

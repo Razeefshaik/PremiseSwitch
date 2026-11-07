@@ -23,7 +23,7 @@ class IdentityResolver:
         self.by_account: dict[tuple[str, str], str] = {}
         self.by_email: dict[str, str] = {}
         for person, ids in ext.identities.items():
-            for source in ("slack", "jira", "github"):
+            for source in ("slack", "jira", "github", "switch"):
                 if ids.get(source):
                     self.by_account[(source, str(ids[source]))] = person
             if ids.get("email"):

@@ -43,7 +43,7 @@ class Envelope(BaseModel):
     entity_key: str = Field(min_length=3, max_length=300)
     op: Literal["upsert", "delete"] = "upsert"
     sequence: int = Field(ge=0)
-    source: Literal["slack", "jira", "github", "pages", "config"]
+    source: Literal["slack", "jira", "github", "pages", "config", "switch"]
     scope: str | None = None             # connector instance that owns this item
     kind: Literal["message", "ticket", "comment", "page", "file", "pull_request", "issue"]
     native_id: str = Field(min_length=1, max_length=200)
