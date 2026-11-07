@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 import re
 
-from cryptography.exceptions import InvalidSignature
+from cryptography.exceptions import InvalidSignature, UnsupportedAlgorithm
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 import yaml
@@ -176,11 +176,11 @@ def verify(receipt: str, public_key, changes: list[dict], now, max_age_hours=24)
             public_key = serialization.load_pem_public_key(public_key)
         if not isinstance(public_key, Ed25519PublicKey):
             return Verdict(False, "invalid public key")
-    except (ValueError, TypeError, UnicodeError):
+    except (ValueError, TypeError, UnicodeError, UnsupportedAlgorithm):
         return Verdict(False, "invalid public key")
     try:
         public_key.verify(signature_bytes, payload_bytes)
-    except (InvalidSignature, ValueError):
+    except (InvalidSignature, ValueError, UnsupportedAlgorithm):
         return Verdict(False, "invalid signature")
     try:
         payload = json.loads(payload_bytes, object_pairs_hook=_object)

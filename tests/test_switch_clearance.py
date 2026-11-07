@@ -160,6 +160,7 @@ def git_repo(tmp_path, issuer):
     repo.write("config/partners/paylane.yaml", "retry:\n  window_hours: 24\ndelivery:\n  timeout_ms: 5000\n")
     repo.write("config/webhookingress.yaml", "dedupe:\n  ttl_hours: 24\n")
     repo.write("config/platform/redis.yaml", "limits:\n  max_ttl_hours: 24\n")
+    repo.write("config/a.yaml", "x: 72\n")
     public = root / ".premise/clearance.pub"
     public.parent.mkdir()
     public.write_bytes(issuer.public_key_pem())
@@ -371,3 +372,16 @@ def test_answerer_without_clearance_keeps_default_behavior():
     reply = Answerer(tools, clock=lambda: 0).respond(message("check paylane.retry_window_hours = 72"))
     assert reply.body.startswith("CLEAR_WITHIN_SCOPE\n") and "Premise-Clearance:" not in reply.body
     assert reply.body.endswith("deterministic · graph rev 1")
+
+
+def test_hook_treats_git_metacharacters_as_literal_paths(git_repo, tmp_path):
+    facts = yaml.safe_load(FACTS.read_text(encoding="utf-8"))
+    facts["facts"]["paylane.retry_window_hours"].update(file="config/[abc].yaml", key="x")
+    mapping = tmp_path / "facts.yaml"
+    mapping.write_text(yaml.safe_dump(facts), encoding="utf-8")
+    literal_issuer = Clearance(git_repo.issuer.key, facts_path=mapping)
+    git_repo.write("config/[abc].yaml", "x: 72\n")
+    git_repo.run("add", "--", "config/")
+    result = {**clear_result(), "changed": [{"fact": "paylane.retry_window_hours", "new": 72}]}
+    outcome = git_repo.commit(live_receipt(literal_issuer, result))
+    assert outcome.returncode == 0, outcome.stderr
