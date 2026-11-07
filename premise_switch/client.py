@@ -47,6 +47,13 @@ async def register_once(server_url: str, registration_key: str, state: StateStor
         state.set_agent(result["id"], result["api_key"])
 
 
+def _text(body: Any) -> str:
+    """A malformed frame is rejected here, before it can reach a responder or the journal."""
+    if not isinstance(body, str):
+        raise ValueError("Message body must be text")
+    return body
+
+
 class SwitchClient:
     """One stable connection and one ordered handler queue per room.
 
@@ -391,14 +398,16 @@ class SwitchClient:
         return InboundMessage(
             room_id=room_id, room_name=self._room_names.get(room_id, room_id),
             message_id=message_id, sequence=sequence,
-            sender=sender, sender_name=payload.get("sender_name", sender),
+            # One person, one account: a resolved participant's stable id, never whichever
+            # transport id the frame happened to carry.
+            sender=participant["id"] if participant else sender, sender_name=payload.get("sender_name", sender),
             sender_handle=participant["name"] if participant else sender,
             # A participant's type decides. sender_kind only fills in for unknown senders, except
             # that "agent" or "platform" always means not a person.
             sender_is_agent=(payload.get("sender_kind") in {"agent", "platform"}
                              or (participant.get("type") != "user" if participant
                                  else payload.get("sender_kind") != "user")),
-            body=payload.get("body", ""), timestamp_ms=payload.get("timestamp", 0),
+            body=_text(payload.get("body", "")), timestamp_ms=payload.get("timestamp", 0),
             thread_id=payload.get("thread_id"),
             addressed=bool(payload.get("addressed", False)) if addressed is None else addressed,
         )

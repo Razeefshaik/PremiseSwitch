@@ -559,3 +559,23 @@ def test_bridged_human_is_matched_by_sender_name_not_transport_id(tmp_path):
     assert coder.sender_is_agent and coder.sender_handle == "coder.razeef"
     assert own is None
     assert not kind.sender_is_agent and platform.sender_is_agent
+
+
+def test_resolved_sender_uses_participant_id_and_body_must_be_text(tmp_path):
+    async def go():
+        state = StateStore(tmp_path)
+        state.set_agent("agent-1", "fake-agent-secret")
+        client = SwitchClient("http://127.0.0.1:9", state, lambda m: None)
+        client._participants["room-1"] = [{"id": "u-uuid", "name": "same-human", "type": "user"}]
+        base = {"message_id": "m", "timestamp": 1, "addressed": False, "sender_name": "same-human"}
+        a = await client._normalise("room-1", {**base, "sender": "u-uuid", "body": "hi"})
+        b = await client._normalise("room-1", {**base, "sender": "@switch-mattermost-same-human:localhost", "body": "hi"})
+        try:
+            await client._normalise("room-1", {**base, "sender": "u-uuid", "body": None})
+            bad = None
+        except ValueError as exc:
+            bad = exc
+        await client.stop()
+        return a, b, bad
+    a, b, bad = asyncio.run(go())
+    assert a.sender == b.sender == "u-uuid" and isinstance(bad, ValueError)
