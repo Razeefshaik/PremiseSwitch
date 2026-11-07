@@ -75,6 +75,8 @@ class SwitchClient:
         self._room_names: dict[str, str] = {}
         self._participants: dict[str, list[dict[str, Any]]] = {}
         self._document_locks: dict[tuple[str, str], asyncio.Lock] = {}
+        # In memory on purpose: a restart is a deliberate request to reclaim every room.
+        self._halted: dict[str, str] = {}
 
     async def post(self, room_id: str, reply: Reply) -> str:
         arguments: dict[str, Any] = {"body": reply.body, "thread_id": reply.thread_id}
@@ -212,7 +214,7 @@ class SwitchClient:
             await asyncio.gather(task, return_exceptions=True)
             self._participants.pop(room_id, None)
         for room_id in rooms:
-            if room_id not in self._rooms and not self.state.room(room_id).get("halted"):
+            if room_id not in self._rooms and room_id not in self._halted:
                 self._rooms[room_id] = asyncio.create_task(self._serve_room(room_id))
 
     def _socket_url(self, room_id: str) -> str:
@@ -232,20 +234,20 @@ class SwitchClient:
         return random.uniform(max(1.0, ceiling / 2), ceiling)
 
     def _halt(self, room_id: str, reason: str) -> None:
-        self.state.room(room_id)["halted"] = reason
-        self.state.save()
-        logger.warning("room_stopped room_id=%s", room_id)
+        self._halted[room_id] = reason
+        logger.error("room_stopped room_id=%s reason=%s restart_to_reclaim=true", room_id, reason)
 
     async def _serve_room(self, room_id: str) -> None:
         queue: asyncio.Queue = asyncio.Queue()
         worker = asyncio.create_task(self._consume(room_id, queue))
         attempt = 0
         try:
-            while not self._stop.is_set() and not self.state.room(room_id).get("halted"):
+            while not self._stop.is_set() and room_id not in self._halted:
                 try:
                     async with connect(self._socket_url(room_id),
                                        additional_headers={"Authorization": f"Bearer {self.state.api_key}"},
                                        ping_interval=None, logger=_wire_logger) as ws:
+                        attempt = 0
                         await self._read_with_worker(room_id, ws, queue, worker)
                 except ConnectionClosed as exc:
                     if exc.rcvd is not None and exc.rcvd.code in {4400, 4401, 4403, 4404, 4409}:
@@ -256,7 +258,7 @@ class SwitchClient:
                     logger.warning("socket_failed room_id=%s exception_type=%s", room_id, type(exc).__name__)
                 except (OSError, TimeoutError, KeyError, TypeError, ValueError) as exc:
                     logger.warning("socket_failed room_id=%s exception_type=%s", room_id, type(exc).__name__)
-                if self.state.room(room_id).get("halted"):
+                if room_id in self._halted:
                     break
                 await self._wait(self._retry_delay(attempt))
                 attempt += 1

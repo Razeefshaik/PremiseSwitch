@@ -206,19 +206,18 @@ async def test_reconnect_uses_saved_identity_cursor_and_generation(tmp_path, evi
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("eviction", ["taken_over", "closed"])
-async def test_final_eviction_does_not_reconnect_even_after_restart(tmp_path, eviction):
+async def test_final_eviction_stops_the_room_until_a_deliberate_restart(tmp_path, eviction):
     with FakeSwitch() as server:
         await server.add_room("room-2")
         async with running_client(server, tmp_path, lambda m: None) as client:
             await eventually(lambda: len(server.sockets) == 2)
             await server.evict("room-1", eviction)
-            await eventually(lambda: client.state.room("room-1").get("halted") == eviction)
+            await eventually(lambda: client._halted.get("room-1") == eviction)
             await asyncio.sleep(2.1)
             assert len([q for q in server.connections if q["rooms"] == "room-1"]) == 1
             assert "room-2" in server.sockets
         async with running_client(server, tmp_path, lambda m: None):
-            await asyncio.sleep(0.15)
-            assert len([q for q in server.connections if q["rooms"] == "room-1"]) == 1
+            await eventually(lambda: len([q for q in server.connections if q["rooms"] == "room-1"]) == 2)
 
 
 @pytest.mark.asyncio
@@ -276,7 +275,7 @@ async def test_refused_connection_stops_retrying(tmp_path):
         client = SwitchClient(server.url, state, lambda m: None, room_poll_seconds=0.05)
         task = asyncio.create_task(client.run())
         try:
-            await eventually(lambda: state.room("room-1").get("halted") == "refused")
+            await eventually(lambda: client._halted.get("room-1") == "refused")
             await asyncio.sleep(2.1)
             assert len(server.connections) == 1
         finally:
