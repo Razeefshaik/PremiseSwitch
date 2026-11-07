@@ -64,10 +64,10 @@ Switch puts that brain where people and AI agents already work. Premise joins th
 
 <div align="center">
 <img src="docs/media/switch-brain.gif" alt="Premise × Switch connects source material to the company brain" width="100%">
-<br><sub>Film excerpt: real Premise web-app footage with animated source labels; the Switch room recordings appear below.</sub>
+<br><sub>Film excerpt: real company-brain web-app footage with animated source labels; the Switch room recordings appear below.</sub>
 </div>
 
-> **No language model decides a Premise Switch verdict.** Every verdict is computed deterministically, and the listener runs with `llm_provider="none"`. The language models are the agents being guarded, not the guard. A down graph, an untracked fact or a failed check is reported as *unchecked*, never as a pass.
+> **No language model decides a Premise × Switch verdict.** Every verdict is computed deterministically, and the listener runs with `llm_provider="none"`. The language models are the agents being guarded, not the guard. A down graph, an untracked fact or a failed check is reported as *unchecked*, never as a pass.
 
 ## Why it only works on Switch
 

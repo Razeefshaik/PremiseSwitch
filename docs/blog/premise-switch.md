@@ -45,7 +45,7 @@ Premise × Switch reads and organises that material into a company brain. It kno
 
 <div align="center">
 <img src="../media/switch-brain.gif" alt="Premise × Switch connects source material to the company brain" width="100%">
-<br><sub>Film excerpt: real Premise web-app footage with animated source labels; the Switch room recordings appear below.</sub>
+<br><sub>Film excerpt: real company-brain web-app footage with animated source labels; the Switch room recordings appear below.</sub>
 </div>
 
 ## Why it only works on Switch
@@ -197,9 +197,10 @@ For **what if Anika leaves?**, the underlying web app has a **Continuity view at
 
 Built on **Premise**, our earlier company brain; this repo adds the Switch agent, room listening, checked replies and signed receipts. The underlying web app offers cited answers, an Explorer, reviewer routing, what-if checks, a time machine and Continuity.
 
-Underneath, it is a decision graph on FalkorDB. Decisions connect to guarantees, assumptions, facts, people, teams and sources. Deterministic tools follow those dependencies to check a proposed change. **No language model decides a Premise Switch verdict**, and the listener runs with `llm_provider="none"`.
+Underneath, it is a decision graph on FalkorDB. Decisions connect to guarantees, assumptions, facts, people, teams and sources. Deterministic tools follow those dependencies to check a proposed change. **No language model decides a Premise × Switch verdict**, and the listener runs with `llm_provider="none"`.
 
 ### What Switch taught us
+
 #### 1. One WebSocket per room, or you can't reply
 
 `post_message` has no room argument. It posts to the connection's single room, and a connection that covers several rooms fails when asked to post. The plain HTTP message endpoint takes a room but has no threads, and answers need threads.
