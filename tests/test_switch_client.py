@@ -227,7 +227,9 @@ async def test_sender_cache_refresh_self_filter_and_join_callback(tmp_path):
         async with running_client(server, tmp_path, seen.append,
                                   on_room_join=lambda room, data: joins.append((room, data))):
             for sender in ["agent-1", "premise", "user-1", "razeef", "coder-1", "unknown"]:
-                await server.send_frame("room-1", server.message(sender, sender=sender))
+                # The fake labels every sender a user by default; a truly unknown sender has no kind.
+                kind = {"sender_kind": None} if sender == "unknown" else {}
+                await server.send_frame("room-1", server.message(sender, sender=sender, **kind))
             await eventually(lambda: len(seen) == 4)
             assert [(m.sender_handle, m.sender_is_agent) for m in seen] == [
                 ("razeef", False), ("razeef", False), ("coder.razeef", True), ("unknown", True)]
