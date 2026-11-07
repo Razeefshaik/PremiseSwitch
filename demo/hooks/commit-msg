@@ -1,0 +1,270 @@
+#!/usr/bin/env python
+"""Copy this standalone file to .git/hooks/commit-msg and make it executable.
+Requires Python, cryptography and PyYAML in the hook's interpreter environment.
+Verification matches premise_switch.clearance and is tested with real commits.
+"""
+from __future__ import annotations
+import base64
+from dataclasses import dataclass
+from datetime import datetime
+import json
+import math
+from pathlib import Path
+import re
+import subprocess
+import sys
+import time
+
+try:
+    from cryptography.exceptions import InvalidSignature, UnsupportedAlgorithm
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+    import yaml
+except ImportError:
+    sys.stderr.write("Premise clearance refused: install cryptography and PyYAML in the hook's Python environment. "
+                     "Ask @premise to check these exact staged config changes before committing.\n")
+    sys.exit(1)
+
+DELETED = {"$delete": True}
+
+TOKEN = re.compile(r"pc1\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+")
+
+FIELDS = {"changes", "graph_rev", "verdict", "issued_at", "room", "thread"}
+
+def _json_value(value):
+    if value is None or type(value) in {str, int, bool}:
+        return
+    if type(value) is float and math.isfinite(value):
+        return
+    if type(value) is list:
+        for item in value:
+            _json_value(item)
+        return
+    if type(value) is dict and all(type(key) is str for key in value):
+        for item in value.values():
+            _json_value(item)
+        return
+    raise ValueError("value must be finite JSON without key coercion")
+
+def canonical(value) -> bytes:
+    _json_value(value)
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True, allow_nan=False).encode("utf-8")
+
+def changes_sorted(changes) -> list[dict]:
+    if not isinstance(changes, list):
+        raise ValueError("changes must be a list")
+    seen, output = set(), []
+    for row in changes:
+        if not isinstance(row, dict) or set(row) != {"file", "key", "value"}:
+            raise ValueError("invalid change fields")
+        path, key = row["file"], row["key"]
+        if (not isinstance(path, str) or not path.startswith("config/") or "\\" in path
+                or any(part in {"", ".", ".."} for part in path.split("/"))
+                or any(ord(c) < 32 for c in path) or ":" in path):
+            raise ValueError("invalid config path")
+        if not isinstance(key, str) or not key or any(not p for p in key.split(".")) or any(ord(c) < 32 for c in key):
+            raise ValueError("invalid dotted key")
+        pair = (path, key)
+        if pair in seen:
+            raise ValueError("duplicate changed key")
+        seen.add(pair)
+        canonical(row["value"])  # finite JSON values only
+        output.append({"file": path, "key": key, "value": row["value"]})
+    return sorted(output, key=lambda row: (row["file"], row["key"]))
+
+def _epoch(value) -> float:
+    if isinstance(value, datetime):
+        if value.tzinfo is None:
+            raise ValueError("time must include a timezone")
+        value = value.timestamp()
+    if type(value) not in {int, float} or not math.isfinite(value) or value < 0:
+        raise ValueError("invalid time")
+    return float(value)
+
+@dataclass(frozen=True)
+class Verdict:
+    ok: bool
+    reason: str
+    payload: dict | None = None
+
+    def __bool__(self):
+        return self.ok
+
+def _object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate JSON key")
+        result[key] = value
+    return result
+
+def verify(receipt: str, public_key, changes: list[dict], now, max_age_hours=24) -> Verdict:
+    if not isinstance(receipt, str) or len(receipt) > 100_000 or not TOKEN.fullmatch(receipt):
+        return Verdict(False, "malformed receipt")
+    try:
+        _, encoded, signature = receipt.split(".")
+        decode = lambda text: base64.b64decode(text + "=" * (-len(text) % 4), altchars=b"-_", validate=True)
+        payload_bytes, signature_bytes = decode(encoded), decode(signature)
+    except ValueError:
+        return Verdict(False, "invalid base64 encoding")
+    try:
+        if isinstance(public_key, str):
+            public_key = public_key.encode("ascii")
+        if isinstance(public_key, bytes):
+            public_key = serialization.load_pem_public_key(public_key)
+        if not isinstance(public_key, Ed25519PublicKey):
+            return Verdict(False, "invalid public key")
+    except (ValueError, TypeError, UnicodeError, UnsupportedAlgorithm):
+        return Verdict(False, "invalid public key")
+    try:
+        public_key.verify(signature_bytes, payload_bytes)
+    except (InvalidSignature, ValueError, UnsupportedAlgorithm):
+        return Verdict(False, "invalid signature")
+    try:
+        payload = json.loads(payload_bytes, object_pairs_hook=_object)
+        if (not isinstance(payload, dict) or set(payload) != FIELDS or canonical(payload) != payload_bytes
+                or canonical(changes_sorted(payload["changes"])) != canonical(payload["changes"])
+                or payload["verdict"] != "CLEAR_WITHIN_SCOPE"
+                or type(payload["graph_rev"]) is not int or payload["graph_rev"] < 0
+                or type(payload["issued_at"]) is not int or payload["issued_at"] < 0
+                or not isinstance(payload["room"], str) or not payload["room"]
+                or payload["thread"] is not None and not isinstance(payload["thread"], str)):
+            return Verdict(False, "invalid payload")
+        current = _epoch(now)
+        if type(max_age_hours) not in {int, float} or not math.isfinite(max_age_hours) or max_age_hours < 0:
+            return Verdict(False, "invalid maximum age")
+        if payload["issued_at"] > current:
+            return Verdict(False, "receipt issued in the future")
+        if current - payload["issued_at"] > max_age_hours * 3600:
+            return Verdict(False, "receipt expired")
+        if canonical(payload["changes"]) != canonical(changes_sorted(changes)):
+            return Verdict(False, "changes do not match staged config")
+    except (ValueError, KeyError, TypeError, UnicodeError, OverflowError, RecursionError):
+        return Verdict(False, "invalid payload or changes")
+    return Verdict(True, "valid", payload)
+
+
+class Refusal(Exception):
+    pass
+
+
+def git(*args, input=None, check=True):
+    result = subprocess.run(["git", "--literal-pathspecs", *args], input=input, capture_output=True)
+    if check and result.returncode:
+        raise Refusal("could not inspect the staged Git snapshot")
+    return result
+
+
+class UniqueLoader(yaml.SafeLoader):
+    def construct_mapping(self, node, deep=False):
+        self.flatten_mapping(node)
+        result = {}
+        for key_node, value_node in node.value:
+            key = self.construct_object(key_node, deep=deep)
+            if not isinstance(key, str) or not key or "." in key or key in result:
+                raise ValueError("ambiguous YAML mapping")
+            result[key] = self.construct_object(value_node, deep=deep)
+        return result
+
+
+def leaves(blob):
+    if blob is None:
+        return {}
+    if len(blob) > 200_000:
+        raise ValueError("config file exceeds assessment size limit")
+    document = yaml.load(blob.decode("utf-8"), Loader=UniqueLoader)
+    if not isinstance(document, dict):
+        raise ValueError("config root must be a mapping")
+    flat, active = {}, set()
+
+    def visit(value, prefix):
+        if isinstance(value, dict) and value:
+            if id(value) in active:
+                raise ValueError("cyclic YAML aliases")
+            active.add(id(value))
+            for key, child in value.items():
+                visit(child, f"{prefix}.{key}" if prefix else key)
+            active.remove(id(value))
+        elif prefix:
+            canonical(value)
+            flat[prefix] = value
+
+    visit(document, "")
+    return flat
+
+
+def blob(path, *, indexed, has_head):
+    if indexed:
+        records = git("ls-files", "--stage", "-z", "--", path).stdout.split(b"\0")
+    elif has_head:
+        records = git("ls-tree", "-z", "HEAD", "--", path).stdout.split(b"\0")
+    else:
+        return None
+    records = [row for row in records if row]
+    if not records:
+        return None
+    if len(records) != 1:
+        raise Refusal("unmerged config file")
+    fields = records[0].split(b"\t", 1)[0].split()
+    if fields[0] not in {b"100644", b"100755"}:
+        raise Refusal("config paths must be regular files")
+    if indexed and fields[2] != b"0":
+        raise Refusal("unmerged config file")
+    return git("cat-file", "blob", (fields[1] if indexed else fields[2]).decode("ascii")).stdout
+
+
+def staged_changes(paths):
+    head = git("rev-parse", "--verify", "--quiet", "HEAD", check=False)
+    has_head = head.returncode == 0
+    if not has_head:
+        ref = git("symbolic-ref", "-q", "HEAD").stdout.decode("utf-8").strip()
+        if git("show-ref", "--verify", "--quiet", ref, check=False).returncode != 1:
+            raise Refusal("cannot establish the base commit")
+    changes = []
+    try:
+        for path in paths:
+            if not path.endswith((".yaml", ".yml")):
+                raise Refusal("unsupported non-YAML config change")
+            before = leaves(blob(path, indexed=False, has_head=has_head))
+            after = leaves(blob(path, indexed=True, has_head=has_head))
+            for key in sorted(before.keys() | after.keys()):
+                if key not in before or key not in after or canonical(before[key]) != canonical(after[key]):
+                    changes.append({"file": path, "key": key,
+                                    "value": after[key] if key in after else DELETED.copy()})
+        return changes_sorted(changes)
+    except (ValueError, TypeError, yaml.YAMLError, UnicodeError, RecursionError, OverflowError):
+        raise Refusal("invalid, ambiguous or unsupported staged YAML") from None
+
+
+def main():
+    try:
+        root = Path(git("rev-parse", "--show-toplevel").stdout.decode("utf-8").strip())
+        paths = [path.decode("utf-8") for path in git("diff", "--cached", "--name-only", "--no-renames", "-z",
+                                                    "--", "config/").stdout.split(b"\0") if path]
+        if not paths:
+            return 0
+        changes = staged_changes(paths)
+        trailers = git("interpret-trailers", "--parse", input=Path(sys.argv[1]).read_bytes()).stdout.splitlines()
+        tokens = [line.partition(b":")[2].strip().decode("ascii") for line in trailers
+                  if line.partition(b":")[0].lower() == b"premise-clearance"]
+        if len(tokens) != 1:
+            raise Refusal("missing or duplicate Premise-Clearance trailer")
+        try:
+            public = (root / ".premise/clearance.pub").read_bytes()
+        except OSError:
+            raise Refusal("missing or unreadable .premise/clearance.pub") from None
+        verdict = verify(tokens[0], public, changes, time.time())
+        if not verdict:
+            raise Refusal(verdict.reason)
+        return 0
+    except Refusal as exc:
+        reason = str(exc)
+    except Exception:
+        reason = "could not validate the staged configuration"
+    sys.stderr.write(f"Premise clearance refused: {reason}. Ask @premise to check these exact staged config changes, "
+                     "then add the returned Premise-Clearance: receipt as a commit trailer.\n")
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

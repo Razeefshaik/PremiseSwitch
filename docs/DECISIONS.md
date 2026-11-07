@@ -83,3 +83,18 @@ One row per design change, with its reason. Add a dated section per batch of wor
 | Decision | By | Status | Reason |
 | --- | --- | --- | --- |
 | Refreeze `extract/__init__.py`, `identity.py` and `entities.py` in `fixtures/v2/gold/recordings/freeze.json` | Claude | Accept | C04 changed them on purpose: whole-message injection taint, and `switch` as a source. They weren't tuned on holdout data. `premise-v2 eval --gold` re-run on 2026-11-07 after the change: no floor failures, and the replay test still requires zero injected grounded candidates |
+
+## 2026-11-07 C06 clearance
+
+- Sign canonical JSON with Ed25519 and encode both payload and signature as unpadded base64url, so the receipt contains no mentions and exact file/key/value changes are authenticated.
+- Resolve every changed fact through the server's `facts.yaml`; missing mappings, contradictory CLEAR results, duplicate targets and invalid values produce no receipt instead of guessing scope.
+- Represent deletion as `value: {"$delete": true}` to distinguish it from a staged YAML null; verification compares canonical JSON to preserve boolean/number/string distinctions.
+- Store the private key only in `SWITCH_STATE_DIR/clearance.key`, created exclusively and chmod 600; reuse existing Ed25519 keys without printing them or silently rotating malformed keys.
+- The standalone commit-msg hook uses only Python, cryptography and PyYAML; it reads YAML blobs from HEAD and the index with NUL-separated Git paths, so unstaged edits cannot change the assessed commit.
+- Reject malformed/ambiguous YAML, unsupported config files, non-regular files and incomplete receipts; compare typed JSON leaf values and explicit deletions, and require a signed empty change set for formatting-only config edits.
+- The hook and its public key are trusted local installation inputs: `--no-verify` bypasses a local hook, and a server-side check is the next step. This is local commit enforcement, not server-side or tamper-proof policy.
+- The hook carries a standalone copy of receipt verification; conformance tests issue real signatures and exercise real git commits to check parity without requiring Premise in the demo repository.
+- Add `clearance=None` after Answerer's existing clock argument and append the opaque trailer after mention escaping only when the conservative CLEAR formatter accepts the result; use wall-clock UTC seconds for expiry and keep the monotonic reply budget unchanged.
+- Leave `__main__.py` and `adapter.py` to Claude; contracts version 1.1.0 documents exact issuer construction, public-key export and README installation text without modifying runtime wiring or the README outside this card's ownership.
+- Use Git's literal pathspec mode for every hook lookup: a failing real-commit regression showed `[abc].yaml` incorrectly selected `a.yaml` as well, making a valid signed change look unmerged.
+- Final clone-local validation, without a database or services: `python -m pytest -q -rP tests/test_switch_clearance.py tests/test_switch_answer.py` reports `154 passed in 45.03s`, including real hook accept/refuse commits, issuer-to-Answerer-to-hook round trips, deletions and index/worktree separation.
