@@ -1,6 +1,6 @@
 # Switch agent protocol: facts for this project
 
-Read on 2026-11-07 from `docs.switchagents.ai` and `core/switch_core/bridges/agent/` in `sandbox-quantum/switch` at HEAD (0.41 canary). **The running server is 0.40.1, so live `GET /agents/{id}/ops` is the final word.** The repo's `agent-protocol.md` still describes SSE, but `handlers.py` says the live connection is the WebSocket.
+Read on 2026-11-07 from `docs.switchagents.ai` and `core/switch_core/bridges/agent/` in `sandbox-quantum/switch` at HEAD (0.41 canary). **The running server is `switch-core:0.31.0` (0.40.1 is Console). Its packaged source was checked on 2026-11-07 and has the same WebSocket route, op signatures and single-room rule. Live `GET /agents/{id}/ops` is still the final word.** The repo's `agent-protocol.md` still describes SSE, but `handlers.py` says the live connection is the WebSocket.
 
 ## Registration (once only)
 `POST /agents` with `Authorization: Bearer <registration key>`:

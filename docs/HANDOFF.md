@@ -82,7 +82,7 @@ A human message should mention only the first agent; mentioning two wakes both a
 ## 7. Open questions
 | Question | Status | Answer |
 | --- | --- | --- |
-| Does the 0.40.1 server match the source at HEAD (0.41 canary)? | open | Check against live `GET /agents/{id}/ops` |
+| Does the running server (`switch-core` 0.31.0) match the source at HEAD (0.41 canary)? | mostly answered | Packaged source matches on routes and signatures; `doctor` confirms against live `/ops` |
 | Does `payload.sender` equal the participant `id` from `list_participants`? | open | Check live; fall back to matching by name |
 | Does a Codex agent wake on a thread reply with no mention? | open | Assume not, confirm in M2 |
 | Are teams allowed, and how is a teammate listed? | open | Razeef to check the form |

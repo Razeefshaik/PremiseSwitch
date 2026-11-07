@@ -45,7 +45,7 @@ pip install -r requirements.lock && pip install --no-deps -e . && pip install we
 python -m pytest -q tests/test_switch_*.py          # no FalkorDB needed unless the card says so
 ```
 
-The full suite needs FalkorDB: `docker run -d --name premise-falkor -p 6379:6379 falkordb/falkordb:v4.18.3`, then `python -m pytest -q` (about 6 minutes).
+The full suite needs FalkorDB and takes about 6 minutes. Don't start Docker on Razeef's laptop: it lags. Point `FALKORDB_PORT` at a server you're given (see your card), or leave the full run to Claude, who runs it on the VM.
 
 ## Context keeping
 
