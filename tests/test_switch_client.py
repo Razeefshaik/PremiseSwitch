@@ -528,3 +528,32 @@ async def test_conflict_requires_owner_recovery(tmp_path):
         assert not state.agent_id
         assert len(server.requests) == 1
         assert "overwrite" not in server.requests[0]["arguments"]
+
+
+def test_bridged_human_is_matched_by_sender_name_not_transport_id(tmp_path):
+    async def go():
+        state = StateStore(tmp_path)
+        state.set_agent("agent-1", "fake-agent-secret")
+        client = SwitchClient("http://127.0.0.1:9", state, lambda m: None)
+        client._participants["room-1"] = [
+            {"id": "u-uuid", "name": "user", "type": "user"},
+            {"id": "c-uuid", "name": "coder.razeef", "type": "agent"},
+            {"id": "agent-1", "name": "premise", "type": "agent"}]
+        base = {"message_id": "m", "body": "@premise help", "timestamp": 1, "addressed": True}
+        human = await client._normalise("room-1", {**base, "sender": "@switch-mattermost-x-user:localhost",
+                                                   "sender_name": "user"})
+        coder = await client._normalise("room-1", {**base, "sender": "@switch-agent-abc:localhost",
+                                                   "sender_name": "coder.razeef"})
+        own = await client._normalise("room-1", {**base, "sender": "@switch-agent-def:localhost",
+                                                 "sender_name": "premise"})
+        kind = await client._normalise("room-1", {**base, "sender": "@x:localhost", "sender_name": "nobody",
+                                                  "sender_kind": "user"})
+        platform = await client._normalise("room-1", {**base, "sender": "@switch:localhost", "sender_name": "user",
+                                                      "sender_kind": "platform"})
+        await client.stop()
+        return human, coder, own, kind, platform
+    human, coder, own, kind, platform = asyncio.run(go())
+    assert not human.sender_is_agent and human.sender_handle == "user"
+    assert coder.sender_is_agent and coder.sender_handle == "coder.razeef"
+    assert own is None
+    assert not kind.sender_is_agent and platform.sender_is_agent

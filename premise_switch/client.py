@@ -369,10 +369,15 @@ class SwitchClient:
         if sender == self.state.agent_id:
             return None
 
+        # Bridged senders arrive as transport ids such as "@switch-mattermost-...:localhost",
+        # which never equal a participant id; sender_name is what matches participant names.
+        sender_name = payload.get("sender_name")
+
         def find():
             participants = self._participants.get(room_id, [])
             return (next((p for p in participants if p["id"] == sender), None)
-                    or next((p for p in participants if p["name"] == sender), None))
+                    or next((p for p in participants if p["name"] == sender), None)
+                    or next((p for p in participants if sender_name and p["name"] == sender_name), None))
 
         participant = find()
         if participant is None:
@@ -388,7 +393,11 @@ class SwitchClient:
             message_id=message_id, sequence=sequence,
             sender=sender, sender_name=payload.get("sender_name", sender),
             sender_handle=participant["name"] if participant else sender,
-            sender_is_agent=participant is None or participant.get("type") != "user",
+            # A participant's type decides. sender_kind only fills in for unknown senders, except
+            # that "agent" or "platform" always means not a person.
+            sender_is_agent=(payload.get("sender_kind") in {"agent", "platform"}
+                             or (participant.get("type") != "user" if participant
+                                 else payload.get("sender_kind") != "user")),
             body=payload.get("body", ""), timestamp_ms=payload.get("timestamp", 0),
             thread_id=payload.get("thread_id"),
             addressed=bool(payload.get("addressed", False)) if addressed is None else addressed,
