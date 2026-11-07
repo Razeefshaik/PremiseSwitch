@@ -1,30 +1,35 @@
 <div align="center">
 
-<a href="#watch-it-work"><img src="docs/media/switch-banner.png" alt="Premise × Switch: a coding agent in a Switch room asks @premise before changing config, and gets BLOCKED with the broken chain, the owner paged and the room where the decision was made" width="100%"></a>
+<a href="‹VIDEO LINK›"><img src="docs/media/switch-banner.png" alt="Premise × Switch: your company's brain, in the chat" width="100%"></a>
+<br><sub>Film title artwork; real Switch and Mattermost footage appears in the demos below.</sub>
 
 ### Switch keeps the log. Premise keeps the meaning.
 
-**A decision memory that joins your Switch rooms as an agent, stops coding agents from breaking what your team decided, and makes git enforce it.**
+**Premise is your company's brain, and Switch puts it in the chat.**
 
-![Tests: 671 passing](https://img.shields.io/badge/tests-671%20passing-2ea043)
-![Switch integration: 286 tests](https://img.shields.io/badge/Switch%20integration-286%20tests-5b63ff)
-![switch-core 0.31.0](https://img.shields.io/badge/switch--core-0.31.0-5b63ff)
-![FalkorDB 4.18.3](https://img.shields.io/badge/FalkorDB-4.18.3-5b63ff)
-![LLM in answers: none](https://img.shields.io/badge/LLM%20in%20answers-none-0a0a0a)
-![Receipts: Ed25519](https://img.shields.io/badge/receipts-Ed25519-0a0a0a)
-![Adversarial review: 8 of 9 fixed](https://img.shields.io/badge/adversarial%20review-8%2F9%20fixed-2ea043)
+It knows why, listens when things change, and checks what a change would break.
+
+![Tests: 671 passing](https://img.shields.io/badge/tests-671%20passing-7cf0c8?style=flat&labelColor=030305)
+![Switch integration: 286 tests](https://img.shields.io/badge/Switch%20integration-286%20tests-5b63ff?style=flat&labelColor=030305)
+![switch-core 0.31.0](https://img.shields.io/badge/switch--core-0.31.0-5b63ff?style=flat&labelColor=030305)
+![FalkorDB 4.18.3](https://img.shields.io/badge/FalkorDB-4.18.3-5b63ff?style=flat&labelColor=030305)
+![LLM in answers: none](https://img.shields.io/badge/LLM%20in%20answers-none-030305?style=flat&labelColor=030305)
+![Receipts: Ed25519](https://img.shields.io/badge/receipts-Ed25519-5b63ff?style=flat&labelColor=030305)
+![Adversarial review: 8 of 9 fixed](https://img.shields.io/badge/adversarial%20review-8%2F9%20fixed-7cf0c8?style=flat&labelColor=030305)
+![Blocked stays blocked](https://img.shields.io/badge/verdict-BLOCKED-ff6b8b?style=flat&labelColor=030305)
+![Unknown stays unchecked](https://img.shields.io/badge/unknown-unchecked-ffd27a?style=flat&labelColor=030305)
 
 <p>
-  <a href="‹VIDEO LINK›"><img src="https://img.shields.io/badge/Watch_the_demo-Under_3_minutes-ff0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Watch the demo, under 3 minutes"></a>
-  <a href="#how-premise-uses-switch"><img src="https://img.shields.io/badge/How_it_uses-Switch-5b63ff?style=for-the-badge&logoColor=white" alt="How Premise uses Switch"></a>
-  <a href="#run-it-yourself"><img src="https://img.shields.io/badge/Run_it-Your_own_Switch-2496ed?style=for-the-badge&logo=docker&logoColor=white" alt="Run it yourself"></a>
-  <a href="docs/blog/premise-switch.md"><img src="https://img.shields.io/badge/Read-The_build_story-0a0a0a?style=for-the-badge&logo=devdotto&logoColor=white" alt="The build story"></a>
+  <a href="‹VIDEO LINK›"><img src="https://img.shields.io/badge/Watch_the_demo-Under_3_minutes-5b63ff?style=for-the-badge&labelColor=030305&logo=youtube&logoColor=white" alt="Watch the demo, under 3 minutes"></a>
+  <a href="#how-premise-uses-switch"><img src="https://img.shields.io/badge/How_it_uses-Switch-5b63ff?style=for-the-badge&labelColor=030305&logoColor=white" alt="How Premise uses Switch"></a>
+  <a href="#run-it-yourself"><img src="https://img.shields.io/badge/Run_it-Your_own_Switch-7cf0c8?style=for-the-badge&labelColor=030305&logo=docker&logoColor=black" alt="Run it yourself"></a>
+  <a href="docs/blog/premise-switch.md"><img src="https://img.shields.io/badge/Read-The_build_story-030305?style=for-the-badge&labelColor=030305&logo=devdotto&logoColor=white" alt="The build story"></a>
 </p>
 
 <p>
-  <a href="#the-story-in-60-seconds">The story in 60 seconds</a> ·
-  <a href="#four-moves-one-room">Four moves</a> ·
-  <a href="#how-premise-uses-switch">How it uses Switch</a> ·
+  <a href="#the-company-brain">The company brain</a> ·
+  <a href="#why-it-only-works-on-switch">Why Switch</a> ·
+  <a href="#see-it-at-kestrel">See it at Kestrel</a> ·
   <a href="#architecture">Architecture</a> ·
   <a href="#the-evidence-against-each-judging-criterion">Judging criteria</a> ·
   <a href="#run-it-yourself">Run it</a>
@@ -38,22 +43,60 @@
 
 <div align="center">
 <img src="docs/media/switch-guard.gif" alt="In the kestrel-dev room, a coding agent asks @premise to check its change and gets BLOCKED, with the broken chain, the owner paged and a link to the payments room" width="100%">
-<sub>Real footage from a Switch room bridged to Mattermost: the coding agent asks before it edits, and Premise answers from the decision graph.</sub>
+<br><sub>Real Switch room footage through Mattermost: the coder asks before editing and Premise checks the consequences.</sub>
 </div>
 
-## What is Premise × Switch?
+## The company brain
 
-**Coding agents now take tasks straight from team chat.** They're fast and confident, and they have no idea why a value is what it is.
+**Premise reads decisions, policies, promises to customers, partner deals, config, tickets, chat, and the people behind them.** It organises decisions, policies, promises, people and their relations, so the team can ask why something exists, who knows about it, and what a change would affect.
 
-Switch puts people and agents in the same rooms and logs every message. But a log isn't meaning: *why* a decision was made, *who* owns it now, and *what breaks* if one number changes. That context lives in other rooms, in old decision records, and with people who have left.
+It knows what each promise rests on. A partner's resend policy constrains a config value; a decision explains why that value matters; a person owns the reasoning. Premise brings those connections together instead of making the next teammate reconstruct them.
 
-**Premise is a custom Switch agent that carries that meaning into every room it joins.** It answers from a decision graph of decisions, guarantees, assumptions, config facts and people. Before a coding agent changes config, it asks `@premise` in the room. A clear verdict comes with a signed receipt, and git refuses config commits without one. Premise also listens to the people in its rooms and proposes updates when they independently report that reality has changed.
+Switch puts that brain where people and AI agents already work. Premise joins their rooms as a real Switch agent: it listens when reality changes, answers what-ifs, and gives a checked change a receipt that git can verify.
 
-> **No language model decides anything in Premise.** Every verdict is computed by graph reasoning, and the listener runs with `llm_provider="none"`. The language models are the agents being guarded, not the guard. A down graph, an untracked fact or a failed check is reported as *unchecked*, never as a pass.
+<div align="center">
+<img src="docs/media/switch-brain.png" alt="What Premise reads and organises: decisions, policies, promises, people and their relations" width="100%">
+<br><sub>Film illustration of the company brain; the room demos below are real Switch and Mattermost footage.</sub>
+</div>
 
-## The story in 60 seconds
+> **No language model decides a Premise Switch verdict.** Every verdict is computed deterministically, and the listener runs with `llm_provider="none"`. The language models are the agents being guarded, not the guard. A down graph, an untracked fact or a failed check is reported as *unchecked*, never as a pass.
 
-In our fictional payments company, **Kestrel**:
+## Why it only works on Switch
+
+**People and AI agents already share Switch rooms. Premise joins them as a real Switch agent, live in every room it joins at once, with one WebSocket per room (up to the server's 32-connection limit).**
+
+It hears the team (Listen), answers the agents (Guard), pages the right people through configured targeted mentions, links the rooms and keeps a shared room document: the decision ledger.
+
+**Without Switch, the brain sits on a shelf. With Switch, it's in every conversation.**
+
+<div align="center">
+<img src="docs/media/switch-why.png" alt="People and agents share linked Switch rooms, with Premise listening and answering in each" width="100%">
+<br><sub>Film illustration of the Switch workflow; the Listen and Guard demos show real room footage.</sub>
+</div>
+
+### How Premise uses Switch
+
+| Switch feature | What Premise does with it | Where |
+| --- | --- | --- |
+| **Custom agent registration** | `premise` registers once with a registration key, then uses only its own API key from a private state file. It never re-registers by itself | [`client.py`](premise_switch/client.py), [`state.py`](premise_switch/state.py) |
+| **One WebSocket per room** | `post_message` and `send_targeted_message` act on the connection's single room, so Premise holds one connection per room with a stable id. It answers heartbeats first, resumes from cursor and generation, treats `taken_over` as final, and backfills `gap`s through `read_context` | [`client.py`](premise_switch/client.py) |
+| **Addressing and threads** | Acts only on `addressed` messages and replies in the asker's thread | [`answer.py`](premise_switch/answer.py) |
+| **`send_targeted_message`** | Mentions *only* the agent that asked, so a Codex agent wakes to read its verdict. Agent chatter gets silence, and replies are capped per thread, so there's no ping-pong | [`answer.py`](premise_switch/answer.py) |
+| **Mattermost bridge** | Bridged people arrive under transport ids. Premise matches them to room participants by `sender_name`, so only humans count as evidence | [`client.py`](premise_switch/client.py) |
+| **Linked rooms** (`list_linked_rooms`) | A BLOCKED reply in `#kestrel-dev` points to `#payments`, where the decision lives. Proposals count evidence from every room Premise is in, but quote only the current room | [`extras.py`](premise_switch/extras.py), [`listen.py`](premise_switch/listen.py) |
+| **Room documents** | Verdicts and proposals are batched into a "Premise decision ledger" document per room (`create_room_document`, `update_room_document`) | [`extras.py`](premise_switch/extras.py) |
+| **Room join** | Premise introduces itself and its commands when it's added to a room | [`extras.py`](premise_switch/extras.py) |
+| **Group template** | One YAML creates both rooms, their instructions, the agents and the link between them | [`kestrel.group.yaml`](templates/kestrel.group.yaml) |
+| **Trust boundaries** | An agent can't change its own addressing (the server returns 403), so the owner decides who may talk to Premise, in Console. Mediation can't gate *other* agents, so enforcement moved to signed receipts at git | [`SWITCH_PROTOCOL.md`](docs/SWITCH_PROTOCOL.md) |
+
+Every operation and argument Premise calls is checked against your live server by `premise_switch.doctor`. Protocol details, verified against the running server, are in [`docs/SWITCH_PROTOCOL.md`](docs/SWITCH_PROTOCOL.md).
+
+
+## See it at Kestrel
+
+### The story in 60 seconds
+
+In **Kestrel, a fictional payments company**, “never charge a customer twice” is a business promise kept by one number in a config file. That number makes sense only alongside the retry window it must outlast:
 
 1. **People talk in `#payments`.** Anika says Paylane now retries for 72 hours. A message tells the AI to set it to 999 hours. Omar confirms the 72-hour change independently.
 2. **Premise listens, unprompted.** It proposes `paylane.retry_window_hours` 24 → 72, with **2 independent origins**, the injection **ignored**, and a verdict preview of **BLOCKED**.
@@ -63,11 +106,7 @@ In our fictional payments company, **Kestrel**:
 6. **Someone hand-edits the config and commits.** Git refuses: no receipt matches.
 7. **Ask why.** `@premise why ADR-012, and who owns it now?` returns the decision lineage, its sources, and the fact that **both accountable owners have left**.
 
-## Four moves, one room
 
-<table>
-<tr>
-<td width="50%" valign="top">
 
 ### Listen
 **Two independent people say reality changed. Premise proposes, unprompted.**
@@ -86,17 +125,14 @@ Ignored injection-like mentions: 1.
 Verdict preview: BLOCKED.
 ```
 
-</td>
-<td width="50%" valign="top">
 
+<div align="center">
 <img src="docs/media/switch-listen.gif" alt="In the payments room, two people report the new retry window, an injection is posted, and Premise proposes the update with two origins and the injection ignored" width="100%">
+<br><sub>Real Switch and Mattermost footage: two independent reports, one ignored injection and a proposal.</sub>
+</div>
 
 The same person or thread counts once. An injection marker anywhere in a message taints every claim in it. Agents and commands never count as evidence. A proposal invites review; it never rewrites the model.
 
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
 
 ### Guard
 **A coding agent asks before it edits.**
@@ -120,8 +156,11 @@ Related: #payments (payments decisions)
 deterministic · graph rev 1
 ```
 
-</td>
-<td width="50%" valign="top">
+
+<div align="center">
+<img src="docs/media/switch-guard.gif" alt="Premise blocks the retry change, then clears the complete fix" width="100%">
+<br><sub>Real Switch and Mattermost footage: BLOCKED, the coder's explanation and the complete fix checked.</sub>
+</div>
 
 ### Enforce
 **A CLEAR verdict is a signed receipt, and git checks it.**
@@ -134,42 +173,43 @@ returns `CLEAR_WITHIN_SCOPE` and a `Premise-Clearance:` line, signed with Ed2551
 $ git commit -am "raise retry window"
 Premise clearance refused: missing or duplicate Premise-Clearance trailer. Ask @premise to check these exact staged config changes, then add the returned Premise-Clearance: receipt as a commit trailer.
 ```
+<div align="center">
 <img src="docs/media/switch-enforce.gif" alt="A hand-edited config commit is refused by the git hook, while the coder's commit with a receipt passes" width="100%">
+<br><sub>Real terminal footage: the hook refuses a hand edit and accepts the matching signed receipt.</sub>
+</div>
+
+**Not a suggestion. A lock.** The lock is a local hook: its bypass and trust limits are listed under [What's next](#whats-next).
 
 The repo holds only the public key, so an agent with repo access can't forge a receipt.
 
-</td>
-</tr>
-<tr>
-<td colspan="2" valign="top">
+## When people leave
 
-### Remember
-**People leave. The reasons stay.** `@premise why ADR-012, and who owns it now?` returns ADR-012's lineage with `path:line` citations, and flags that both accountable owners, Lena Fischer and Marco Ruiz, have left. Reviewers are suggested separately: suggesting a reviewer never silently appoints a new owner.
+**When people leave, the company doesn't forget.**
 
-</td>
-</tr>
-</table>
+Ask `@premise why ADR-012, and who owns it now?` in a room. The live answer returns the decision's lineage and sources, flags that both accountable owners, **Lena Fischer and Marco Ruiz**, have left, and lists reviewers. Suggesting a reviewer never silently appoints a new owner.
 
-## How Premise uses Switch
+For the forward-looking question, **what if Anika leaves?**, open **Continuity in the Premise web app at `/continuity`**. It shows which promises lose their verification and who reviews next. This is an existing web-app feature, not a chat command.
 
-**Switch is the workflow, not a notification channel.** Every move above happens *in a Switch room*, through the agent protocol. Take Switch away and there's no room for the coder to ask in, no people to listen to, no threads to answer in, no linked room to point at, and no addressing to stop agents talking to strangers.
+<div align="center">
+<img src="docs/media/switch-leave.png" alt="Departed accountable owners and the people who can review next" width="100%">
+<br><sub>Film illustration of ownership continuity; the cited chat answer is live, while departure simulation lives in the web app.</sub>
+</div>
 
-| Switch feature | What Premise does with it | Where |
-| --- | --- | --- |
-| **Custom agent registration** | `premise` registers once with a registration key, then uses only its own API key from a private state file. It never re-registers by itself | [`client.py`](premise_switch/client.py), [`state.py`](premise_switch/state.py) |
-| **One WebSocket per room** | `post_message` and `send_targeted_message` act on the connection's single room, so Premise holds one connection per room with a stable id. It answers heartbeats first, resumes from cursor and generation, treats `taken_over` as final, and backfills `gap`s through `read_context` | [`client.py`](premise_switch/client.py) |
-| **Addressing and threads** | Acts only on `addressed` messages and replies in the asker's thread | [`answer.py`](premise_switch/answer.py) |
-| **`send_targeted_message`** | Mentions *only* the agent that asked, so a Codex agent wakes to read its verdict. Agent chatter gets silence, and replies are capped per thread, so there's no ping-pong | [`answer.py`](premise_switch/answer.py) |
-| **Mattermost bridge** | Bridged people arrive under transport ids. Premise matches them to room participants by `sender_name`, so only humans count as evidence | [`client.py`](premise_switch/client.py) |
-| **Linked rooms** (`list_linked_rooms`) | A BLOCKED reply in `#kestrel-dev` points to `#payments`, where the decision lives. Proposals count evidence from every room Premise is in, but quote only the current room | [`extras.py`](premise_switch/extras.py), [`listen.py`](premise_switch/listen.py) |
-| **Room documents** | Verdicts and proposals are batched into a "Premise decision ledger" document per room (`create_room_document`, `update_room_document`) | [`extras.py`](premise_switch/extras.py) |
-| **Room join** | Premise introduces itself and its commands when it's added to a room | [`extras.py`](premise_switch/extras.py) |
-| **Group template** | One YAML creates both rooms, their instructions, the agents and the link between them | [`kestrel.group.yaml`](templates/kestrel.group.yaml) |
-| **Trust boundaries** | An agent can't change its own addressing (the server returns 403), so the owner decides who may talk to Premise, in Console. Mediation can't gate *other* agents, so enforcement moved to signed receipts at git | [`SWITCH_PROTOCOL.md`](docs/SWITCH_PROTOCOL.md) |
+## What else it does
 
-Every operation and argument Premise calls is checked against your live server by `premise_switch.doctor`. Protocol details, verified against the running server, are in [`docs/SWITCH_PROTOCOL.md`](docs/SWITCH_PROTOCOL.md).
+The company brain existed before this hackathon. The Switch integration brings it into team conversations; the existing Premise app also offers:
 
-## Architecture
+| Feature | Where it helps |
+| --- | --- |
+| Cited answers and reviewer routing | Understand why a decision exists and who can review it now |
+| What-if checks | Try a proposed change without saving or posting it |
+| Explorer and source citations | Follow the relations behind an answer, down to its file and line |
+| Time machine | See when attestations expire and promises become unknown |
+| Continuity | Simulate a departure in the web app and find the next reviewers |
+
+The engineering details below explain how it works. Answers use deterministic graph reasoning on FalkorDB; no language model decides a Switch verdict.
+
+### Architecture
 
 ```mermaid
 flowchart LR
@@ -190,7 +230,7 @@ flowchart LR
     K -.->|"coder commits"| GIT
 ```
 
-### The Guard loop
+#### The Guard loop
 
 ```mermaid
 sequenceDiagram
@@ -232,14 +272,44 @@ sequenceDiagram
 
 </details>
 
-## The evidence against each judging criterion
+### The evidence against each judging criterion
 
 | Criterion | What is demonstrated | Evidence |
 | --- | --- | --- |
 | **Use of Switch** (30%) | A custom agent over the agent protocol: per-room WebSockets, threads, targeted mentions, linked rooms, room documents, room join, a group template, the Mattermost bridge. Every move happens in a room | [How it uses Switch](#how-premise-uses-switch), [`premise_switch/client.py`](premise_switch/client.py), [protocol notes](docs/SWITCH_PROTOCOL.md) |
-| **Technical execution** (25%) | 671 tests pass, 286 of them for the Switch integration, against a fake Switch server that speaks the WebSocket protocol and rejects undocumented arguments. Gold extraction floors pass. An adversarial review found 9 issues; 8 are fixed with regression tests. The setup below was followed literally in a fresh clone | [Testing](#testing), [review](docs/reviews/C08-2026-11-07.md), [`doctor`](premise_switch/doctor.py) |
-| **Creativity and impact** (25%) | Context that stops at the room's edge, carried across rooms. Agents stopped *before* they break a guarantee, with the owner paged. Verdicts become receipts that git enforces | [The story](#the-story-in-60-seconds), [Enforce](#enforce) |
+| **Technical execution** (25%) | 671 tests pass, 286 of them for the Switch integration, against a fake Switch server that speaks the WebSocket protocol and rejects undocumented arguments. The gold evaluation has **0 gold floor failures**. An adversarial review found 9 issues; 8 are fixed with regression tests. The setup below was followed literally in a fresh clone | [Testing](#testing), [review](docs/reviews/C08-2026-11-07.md), [`doctor`](premise_switch/doctor.py) |
+| **Creativity and impact** (25%) | Context that stops at the room's edge, carried across rooms. Agents stopped *before* they break a guarantee, with the owner paged. Verdicts become receipts that git enforces | [The story](#see-it-at-kestrel), [Enforce](#enforce) |
 | **Presentation** (20%) | The demo video shows each Switch feature at work, and this README maps every feature to its code | [Demo video](‹VIDEO LINK›), [build story](docs/blog/premise-switch.md), [walkthrough](docs/WALKTHROUGH.md) |
+
+### Built during the hackathon
+
+Premise existed before this hackathon: a decision graph on FalkorDB ([original project](https://github.com/Razeefshaik/Premise), [original README](docs/PREMISE_ORIGINAL.md)). The repo is a copy with its history kept, so the dividing line is visible: **`f11f34e` is the last pre-hackathon commit**, and everything from **`9769606`** onwards was built on 7 November 2026. Each piece was built on its own branch and merged with a `Merge Cxx` commit.
+
+| New | What |
+| --- | --- |
+| `premise_switch/` | The whole Switch agent: client, state, router, formatting, answers, listening, clearance, extras, adapter, doctor, entry point |
+| `tests/test_switch_*.py`, `tests/fake_switch.py`, `tests/switch_fakes.py` | Its tests and fakes |
+| `templates/kestrel.group.yaml` | The Switch group template |
+| `demo/hooks/commit-msg`, `demo/seed_payments.py` | The receipt-checking hook and a demo message seeder |
+| `scripts/up.sh`, `scripts/prepare_switch_demo.py`, `scripts/reset_listen.sh`, `docker-compose.switch.yml` | Setup and demo tooling |
+| `docs/SWITCH_PROTOCOL.md`, `docs/HANDOFF.md`, `docs/DECISIONS.md`, `docs/CONTRACTS.md`, `docs/blog/` | Design records |
+
+**Changed in pre-existing code:** `premise_v2/` gained `switch` as an evidence source and whole-message injection taint (`envelope.py`, `gateway.py`, `identity.py`, `entities.py`, `normalize.py`, `extract/__init__.py`). The gold freeze was updated for those files after the gold evaluation re-passed. `premise/config.py` and `.env.example` no longer point at the original project. Two deploy workflows and two scripts that acted on the original's deployments were removed.
+
+**Pre-existing:** `premise/` (graph, reasoning, ingest, web), the rest of `premise_v2/`, the Kestrel sandbox company, and its tests.
+
+**How we built it:** a small team directing several Codex agents in parallel. Each worked on its own card against frozen interfaces in [`premise_switch/contracts.py`](premise_switch/contracts.py). Every branch was reviewed, tested on the server and merged. The cards' file boundaries, the merges and the fixes made in review are all visible in the history.
+
+## What's next
+
+**Business rules are next ? not built yet.** A decision is a reason, an owner and a promise, so the same format fits business rules next: refund windows, pricing, partner terms. Those business-rule examples are roadmap ideas; they are not implemented or tested.
+
+- **The receipt check is local.** `git commit --no-verify` bypasses a hook. Next is a server-side check: a CI status or merge gate that verifies receipts.
+- **Receipts don't expire with the graph.** A receipt is valid for 24 hours and doesn't recheck whether the graph has changed since.
+- **Listen is pattern-based.** Without a model, it recognises claims that mention a known entity, term and number together. That's precise, but misses paraphrases.
+- **Delivery is at most once.** A transient post failure is retried once, but a reply lost across a restart isn't resent. Next is an outbox with acknowledgements.
+- **Mattermost only so far.** Other Switch messaging apps should work through the same protocol, but we haven't tested them.
+- **One graph per deployment.** Multi-team graphs and permissions are future work.
 
 ## Run it yourself
 
@@ -343,7 +413,7 @@ Heads up, Paylane retries for 72 hours since this week's change.
 git commit -am "raise retry window"    # refused: no Premise-Clearance receipt
 ```
 
-## Testing
+### Testing
 
 ```bash
 .venv/bin/python -m pytest -q tests/test_switch_*.py       # the Switch integration: about 290 tests, no database needed for most
@@ -387,35 +457,7 @@ After the build, a separate review tried to break the finished code. It found ni
 
 </details>
 
-## Built during the hackathon
-
-Premise existed before this hackathon: a decision graph on FalkorDB ([original project](https://github.com/Razeefshaik/Premise), [original README](docs/PREMISE_ORIGINAL.md)). The repo is a copy with its history kept, so the dividing line is visible: **`f11f34e` is the last pre-hackathon commit**, and everything from **`9769606`** onwards was built on 7 November 2026. Each piece was built on its own branch and merged with a `Merge Cxx` commit.
-
-| New | What |
-| --- | --- |
-| `premise_switch/` | The whole Switch agent: client, state, router, formatting, answers, listening, clearance, extras, adapter, doctor, entry point |
-| `tests/test_switch_*.py`, `tests/fake_switch.py`, `tests/switch_fakes.py` | Its tests and fakes |
-| `templates/kestrel.group.yaml` | The Switch group template |
-| `demo/hooks/commit-msg`, `demo/seed_payments.py` | The receipt-checking hook and a demo message seeder |
-| `scripts/up.sh`, `scripts/prepare_switch_demo.py`, `scripts/reset_listen.sh`, `docker-compose.switch.yml` | Setup and demo tooling |
-| `docs/SWITCH_PROTOCOL.md`, `docs/HANDOFF.md`, `docs/DECISIONS.md`, `docs/CONTRACTS.md`, `docs/blog/` | Design records |
-
-**Changed in pre-existing code:** `premise_v2/` gained `switch` as an evidence source and whole-message injection taint (`envelope.py`, `gateway.py`, `identity.py`, `entities.py`, `normalize.py`, `extract/__init__.py`). The gold freeze was updated for those files after the gold evaluation re-passed. `premise/config.py` and `.env.example` no longer point at the original project. Two deploy workflows and two scripts that acted on the original's deployments were removed.
-
-**Pre-existing:** `premise/` (graph, reasoning, ingest, web), the rest of `premise_v2/`, the Kestrel sandbox company, and its tests.
-
-**How we built it:** a small team directing several Codex agents in parallel. Each worked on its own card against frozen interfaces in [`premise_switch/contracts.py`](premise_switch/contracts.py). Every branch was reviewed, tested on the server and merged. The cards' file boundaries, the merges and the fixes made in review are all visible in the history.
-
-## Limitations and what's next
-
-- **The receipt check is local.** `git commit --no-verify` bypasses a hook. Next is a server-side check: a CI status or merge gate that verifies receipts.
-- **Receipts don't expire with the graph.** A receipt is valid for 24 hours and doesn't recheck whether the graph has changed since.
-- **Listen is pattern-based.** Without a model, it recognises claims that mention a known entity, term and number together. That's precise, but misses paraphrases.
-- **Delivery is at most once.** A transient post failure is retried once, but a reply lost across a restart isn't resent. Next is an outbox with acknowledgements.
-- **Mattermost only so far.** Other Switch messaging apps should work through the same protocol, but we haven't tested them.
-- **One graph per deployment.** Multi-team graphs and permissions are future work.
-
-## Read more
+### Read more
 
 - [`docs/WALKTHROUGH.md`](docs/WALKTHROUGH.md): the code, explained step by step.
 - [`docs/SWITCH_PROTOCOL.md`](docs/SWITCH_PROTOCOL.md): the Switch protocol as we found it on the live server.
