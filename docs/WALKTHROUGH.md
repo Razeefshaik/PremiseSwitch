@@ -73,4 +73,4 @@ The change makes `A_RETRY_WINDOW` false, which breaks `G_DEDUPE`, which breaks `
 | **Could the coder fake a receipt?** | Not without Premise's private key, which stays on the server. |
 | **What stops agents looping?** | Premise answers agents only for explicit commands, mentions only the asker, and caps replies per thread. |
 | **What was built during the hackathon?** | Everything from commit `9769606` onwards. The README lists it by directory. |
-| **How do we know it works?** | 270 Switch tests, including a fake Switch server and real git commits; the full suite of about 570; the gold evaluation; and live runs against Switch 0.31.0 and Mattermost. |
+| **How do we know it works?** | 286 Switch tests, including a fake Switch server and real git commits; the full suite of 671; the gold evaluation; an adversarial review whose findings are fixed (`docs/reviews/C08-2026-11-07.md`); and live runs against Switch 0.31.0 and Mattermost. |
