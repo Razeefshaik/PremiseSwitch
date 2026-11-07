@@ -5,16 +5,23 @@ params:
     default: [$first]
   coder:
     type: agent
-    description: The coding agent's name
+    label: Coding agent
+    description: The coding agent that edits the Kestrel repo
 group:
   name: Kestrel
+  description: Kestrel payments decisions and the room where agents change config, guarded by Premise
 rooms:
   - name: payments
+    description: Where the payments team discusses decisions. Premise listens for evidence.
     bridge: "{bridge}"
     agents: [premise]
     users: ["{$creator}"]
-    instructions: Decisions about Kestrel payments are discussed here. Premise listens.
+    instructions: >-
+      Decisions about Kestrel payments are discussed here. Premise listens to this room
+      and posts a proposal when people independently report that reality has changed.
+      Ask @premise for answers, for example: @premise why ADR-012
   - name: kestrel-dev
+    description: Where coding agents change Kestrel config, after Premise checks each change.
     bridge: "{bridge}"
     agents: [premise, "{coder}"]
     users: ["{$creator}"]
