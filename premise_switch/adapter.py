@@ -49,7 +49,8 @@ class Adapter:
         try:
             await self.gateway.post(message.room_id, reply)
         except Exception as exc:
-            log.error("post failed in room %s: %s", message.room_id, type(exc).__name__)
+            status = getattr(getattr(exc, "response", None), "status_code", "")
+            log.error("post failed in room %s: %s %s", message.room_id, type(exc).__name__, status)
 
     @staticmethod
     def _unavailable(message: InboundMessage) -> Reply | None:
