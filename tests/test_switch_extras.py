@@ -4,6 +4,8 @@ import asyncio
 import pytest
 
 from premise_switch.extras import DecisionLedger, LEDGER_MAX_BYTES, LEDGER_NAME
+from premise_switch.extras import intro_message, related_rooms_line, reviewer_mentions, room_join_intro
+from premise_switch.contracts import LinkedRoom
 from switch_fakes import FakeGateway
 
 
@@ -75,3 +77,54 @@ async def test_ledger_concurrency_and_untrusted_cells():
     text = gateway.documents["r", LEDGER_NAME]
     assert len(gateway.documents) == 1 and len(text.splitlines()) == 12
     assert "@coder" not in text and "&#124;" in text and "&lt;b&gt;" in text
+
+
+def test_reviewers_only_mention_allowlisted_humans(monkeypatch):
+    monkeypatch.setenv("SWITCH_REVIEWER_HANDLES", "p_jun=jun.park,p_anika=anika.rao")
+    assert reviewer_mentions(["p_jun", "p_anika"]) == "Reviewers: @jun.park, @anika.rao"
+    text = reviewer_mentions({"p_jun": "Jun Park", "p_unknown": "Unknown Human", "agent": "@coder"})
+    assert text == "Reviewers: @jun.park, Unknown Human, @\u200bcoder"
+    assert "@coder" not in text
+    assert reviewer_mentions([], "") == ""
+    assert reviewer_mentions(["p_jun", "p_jun"], {"p_jun": "jun.park"}) == "Reviewers: @jun.park"
+
+
+@pytest.mark.parametrize("handle", ["@coder", "coder\n@everyone", "channel", "all", "here", "premise", "<@coder>"])
+def test_reviewers_reject_malformed_and_broadcast_handles(handle):
+    assert reviewer_mentions({"p": "Person"}, {"p": handle}) == "Reviewers: Person"
+
+
+def test_intro_once_per_room_and_both_self_identifiers():
+    seen = set()
+    assert room_join_intro("r1", {"member": "other", "member_name": "coder"},
+                           agent_id="premise-id", room_name="dev", seen=seen) is None
+    assert seen == set()
+    first = room_join_intro("r1", {"member": "premise-id", "member_name": "different"},
+                            agent_id="premise-id", room_name="dev", seen=seen)
+    assert first.body == intro_message("dev") and first.mention == () and first.thread_id is None
+    assert room_join_intro("r1", {"member_name": "premise"}, agent_id="premise-id", room_name="dev", seen=seen) is None
+    assert room_join_intro("r2", {"member": "transport-id", "member_name": "premise"},
+                           agent_id="premise-id", room_name="payments", seen=seen) is not None
+    assert seen == {"r1", "r2"}
+    body = intro_message("dev @coder")
+    assert "@coder" not in body
+    for command in ("help", "check fact.key", "who knows", "why ADR-012", "lineage", "impact"):
+        assert command in body
+
+
+@pytest.mark.asyncio
+async def test_related_rooms_members_only_and_failures(caplog):
+    gateway = FakeGateway()
+    assert await related_rooms_line(gateway, "dev") == ""
+    gateway.links["dev"] = [LinkedRoom("p", "payments", "payments decisions", True),
+                             LinkedRoom("secret", "private-finance", "secret label", False)]
+    assert await related_rooms_line(gateway, "dev") == "Related: #payments (payments decisions)"
+    gateway.links["dev"] = [LinkedRoom("p", "@coder", "@other", True)]
+    text = await related_rooms_line(gateway, "dev")
+    assert "@coder" not in text and "@other" not in text
+
+    async def fail(room_id):
+        raise ValueError("secret-token and private room text")
+    gateway.linked_rooms = fail
+    assert await related_rooms_line(gateway, "dev") == ""
+    assert "ValueError" in caplog.text and "secret-token" not in caplog.text
