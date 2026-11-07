@@ -20,3 +20,9 @@ One row per design change, with its reason. Add a dated section per batch of wor
 | The repo is the `PremiseSwitch` folder itself; notes and prompts sit one level up | Razeef | Accept | Razeef codes in `PremiseSwitch` and keeps working files outside it |
 | Everyone commits as they build, one commit per working step, no squashing | Razeef | Accept | The history should give a clear view of how the work was done |
 | Agent code never sets addressing | Claude | Accept | The server returns 403 when an agent changes its own settings, and the default already admits the owner and the owner's agents |
+
+## 2026-11-07 C03 answer and guard
+
+| Decision | By | Status | Reason |
+| --- | --- | --- | --- |
+| Parse whole assignments with a bounded scalar grammar and mark explicit commands separately | C03 | Accept | Reject ambiguous or malformed changes; free-form fallback must remain silent for agents |
