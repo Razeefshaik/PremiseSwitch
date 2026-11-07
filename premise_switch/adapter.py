@@ -1,0 +1,89 @@
+"""Connects room messages to Listen and Answer. Holds no Switch or graph details itself."""
+from __future__ import annotations
+
+import asyncio
+import logging
+
+from .contracts import InboundMessage, Listener, Reply, Responder, RoomGateway
+
+log = logging.getLogger("premise_switch.adapter")
+
+UNAVAILABLE = "Premise is unavailable right now, so this change is unchecked."
+
+
+class Adapter:
+    """Records every message, answers addressed ones, and announces proposals after a quiet gap.
+
+    `gateway` is set after construction because the client needs `on_message` to be built,
+    and the adapter needs the client to post.
+    """
+
+    def __init__(self, responder: Responder, listener: Listener | None = None,
+                 gateway: RoomGateway | None = None, debounce_seconds: float = 3.0):
+        self.responder, self.listener, self.gateway = responder, listener, gateway
+        self.debounce_seconds = debounce_seconds
+        self._debounce: asyncio.Task | None = None
+        self._listen_lock = asyncio.Lock()
+
+    async def on_message(self, message: InboundMessage) -> None:
+        """Never raises: one bad message must not stop the room's connection."""
+        if self.listener is not None:
+            try:
+                await asyncio.to_thread(self.listener.record, message)
+                self._schedule_listen()
+            except Exception as exc:
+                log.error("listen record failed: %s", type(exc).__name__)
+        await self._answer(message)
+
+    async def _answer(self, message: InboundMessage) -> None:
+        try:
+            reply = await asyncio.to_thread(self.responder.respond, message)
+        except Exception as exc:
+            # The responder promises not to raise, but an addressed question must never
+            # go unanswered in a way that could be read as "no objection".
+            log.error("responder failed: %s", type(exc).__name__)
+            reply = self._unavailable(message)
+        if reply is None:
+            return
+        try:
+            await self.gateway.post(message.room_id, reply)
+        except Exception as exc:
+            log.error("post failed in room %s: %s", message.room_id, type(exc).__name__)
+
+    @staticmethod
+    def _unavailable(message: InboundMessage) -> Reply | None:
+        if not message.addressed:
+            return None
+        mention = (message.sender_handle,) if message.sender_is_agent else ()
+        return Reply(UNAVAILABLE, message.thread_id or message.message_id, mention)
+
+    def _schedule_listen(self) -> None:
+        if self._debounce is not None and not self._debounce.done():
+            self._debounce.cancel()
+        self._debounce = asyncio.create_task(self._listen_after_gap())
+
+    async def _listen_after_gap(self) -> None:
+        await asyncio.sleep(self.debounce_seconds)
+        # Shielded so a new message restarts the wait, but never cancels a running pipeline.
+        await asyncio.shield(self._listen_once())
+
+    async def _listen_once(self) -> None:
+        if self._listen_lock.locked():
+            # A run is in progress and may have missed the newest message, so look again after it.
+            self._schedule_listen()
+            return
+        async with self._listen_lock:
+            try:
+                notices = await asyncio.to_thread(self.listener.run_once)
+            except Exception as exc:
+                log.error("listen run failed: %s", type(exc).__name__)
+                return
+            for notice in notices:
+                try:
+                    await self.gateway.post(notice.room_id, Reply(notice.body))
+                except Exception as exc:
+                    log.error("proposal post failed in room %s: %s", notice.room_id, type(exc).__name__)
+
+    async def aclose(self) -> None:
+        if self._debounce is not None and not self._debounce.done():
+            self._debounce.cancel()
