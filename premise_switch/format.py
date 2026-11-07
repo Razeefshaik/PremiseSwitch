@@ -51,7 +51,7 @@ def _citations(rows: Any) -> list[str]:
     refs = []
     for source in sources:
         path, line = source.get("path"), source.get("line")
-        if path and isinstance(line, int) and line > 0 and not re.search(r"://|www\.", path, re.I):
+        if path and len(path) <= 180 and isinstance(line, int) and line > 0 and not re.search(r"://|www\.", path, re.I):
             ref = f"{_text(path, 180)}:{line}"
             if ref not in refs:
                 refs.append(ref)
@@ -72,6 +72,14 @@ def format_check(result: dict[str, Any], names: dict[str, str] | None = None) ->
         verdict = "BLOCKED" if verdict == "BLOCKED" else "NEEDS_REVIEW"
         return _finish([verdict, "At least one fact isn't tracked, so this change is unchecked.",
                         "Tracked results do not establish the impact of the entire change."], revision)
+    if verdict == "CLEAR_WITHIN_SCOPE" and (
+        type(revision) is not int
+        or any(not isinstance(result.get(key), list) for key in ("reasons", "not_holding", "decisions"))
+        or result["not_holding"]
+        or any(g.get("status") != "holds" for g in result.get("guarantees", []))
+        or any(r.get("code") not in {"R_ALL_HOLD", "R_NO_TRACKED_FACTS"} for r in result["reasons"])
+    ):
+        return _finish([UNAVAILABLE], revision)
     lines = [verdict]
     bad = result.get("not_holding", [])
     for guarantee in bad[:4]:
@@ -113,7 +121,7 @@ def format_result(name: str, rows: Any) -> str:
         lines.append(f"Lifecycle: {_text(decision.get('status', 'unknown'))}")
         if not rows.get("active_accountable"):
             lines.append("No active accountable owner. Departed or unavailable owners: " +
-                         _people(rows.get("unavailable", []), rows.get("names", {})))
+                         (_people(rows["unavailable"], rows.get("names", {})) if rows.get("unavailable") else "none recorded"))
         else:
             lines.append("Active accountable: " + _people(rows["active_accountable"], rows.get("names", {})))
         lines.append("Reviewers: " + _people(rows.get("reviewers", []), rows.get("names", {})))

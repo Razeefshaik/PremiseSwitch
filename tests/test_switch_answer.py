@@ -266,3 +266,29 @@ def test_health_and_hypothetical_impact_show_exact_rows():
     assert "G_DEDUPE: unknown" in health and "A_RETRY_WINDOW: unverified" in health
     impact = answerer.respond(message("impact A_RETRY_WINDOW")).body
     assert "Hypothetical" in impact and "G_DEDUPE" in impact and "ADR-012" in impact
+
+
+@pytest.mark.parametrize("result", [
+    {"verdict": "CLEAR_WITHIN_SCOPE"},
+    {**blocked_result(), "verdict": "CLEAR_WITHIN_SCOPE", "reasons": []},
+    {"verdict": "CLEAR_WITHIN_SCOPE", "graph_rev": 1, "reasons": [], "decisions": [], "not_holding": [],
+     "guarantees": [{"id": "G_DEDUPE", "status": "unknown"}]},
+    {"verdict": "CLEAR_WITHIN_SCOPE", "graph_rev": 1, "reasons": [{"code": "R_BROKEN_T1"}],
+     "decisions": [], "not_holding": []},
+])
+def test_incomplete_or_contradictory_clear_is_unavailable(result):
+    body = Answerer(FakeTools({"check_change": result})).respond(message("check a.b = 72")).body
+    assert "unchecked" in body and "CLEAR_WITHIN_SCOPE" not in body
+
+
+def test_complete_clear_result_keeps_scope_limit_and_revision():
+    result = {"verdict": "CLEAR_WITHIN_SCOPE", "graph_rev": 1, "not_holding": [], "decisions": [],
+              "guarantees": [{"id": "G_DEDUPE", "status": "holds"}], "reasons": [{"code": "R_ALL_HOLD"}]}
+    body = Answerer(FakeTools({"check_change": result})).respond(message("check a.b = 72")).body
+    assert body.startswith("CLEAR_WITHIN_SCOPE\n")
+    assert "Untracked behavior is not assessed" in body and body.endswith("graph rev 1")
+
+
+def test_long_citation_path_is_omitted_instead_of_corrupted():
+    body = format_result("search_evidence", [{"text": "evidence", "path": "x" * 200 + ".md", "line": 2}])
+    assert "…:2" not in body and "Sources:" not in body

@@ -33,3 +33,5 @@ One row per design change, with its reason. Add a dated section per batch of wor
 | Serialize responder admission and cap all agent replies per room/thread at six per sliding ten minutes | C03 | Accept | to_thread calls can race; failures count too, and idle budgets expire |
 | Catch parser, tool, and formatter failures without logging text or exception details | C03 | Accept | Room input is untrusted and any failed assessment must remain explicitly unchecked |
 | Commit real kestrel regression tests without starting Docker on this Windows machine | C03 | Accept | Docker engine is unavailable; the card permits server review of unrun graph tests |
+| Reject incomplete or internally contradictory clear results as unavailable | C03 | Accept | A clear token alone cannot override missing assessment rows, a broken chain, or review reasons |
+| Omit oversized citation paths instead of abbreviating them | C03 | Accept | A truncated path is not an accurate path:line citation |
