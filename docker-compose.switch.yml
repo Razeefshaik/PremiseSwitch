@@ -1,0 +1,38 @@
+# Standalone compose file for running beside a Switch server on one host.
+# Use it alone (docker compose -f docker-compose.switch.yml up -d): compose merges `ports`
+# additively, so an override of docker-compose.yml would still bind 8000 and 6379.
+name: premise-switch
+services:
+  falkordb:
+    image: falkordb/falkordb:v4.18.3
+    ports:
+      - "127.0.0.1:6380:6379"
+    volumes:
+      - premise_switch_graph:/var/lib/falkordb/data
+    environment:
+      REDIS_ARGS: "--appendonly yes"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 2s
+      retries: 30
+  app:
+    build: .
+    ports:
+      - "127.0.0.1:8100:8000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      FALKORDB_HOST: falkordb
+      FALKORDB_PORT: 6379
+      GRAPH_NAME: ${GRAPH_NAME:-premise_switch}
+      POLL_ENABLED: "false"
+      LLM_PROVIDER: none
+      SANDBOX_CLONE_DIR: /app/.runtime/kestrel
+    depends_on:
+      falkordb:
+        condition: service_healthy
+    command: ["python", "-m", "premise.bootstrap"]
+volumes:
+  premise_switch_graph:
