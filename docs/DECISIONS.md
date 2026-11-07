@@ -20,3 +20,9 @@ One row per design change, with its reason. Add a dated section per batch of wor
 | The repo is the `PremiseSwitch` folder itself; notes and prompts sit one level up | Razeef | Accept | Razeef codes in `PremiseSwitch` and keeps working files outside it |
 | Everyone commits as they build, one commit per working step, no squashing | Razeef | Accept | The history should give a clear view of how the work was done |
 | Agent code never sets addressing | Claude | Accept | The server returns 403 when an agent changes its own settings, and the default already admits the owner and the owner's agents |
+
+## 2026-11-07 C02 Switch client
+
+- Preserve top-level `agent_id` and `api_key` in atomic private state, extending it with room state; this reads the existing VM identity without re-registering.
+- Registration is explicit, stores credentials once, never overwrites and never changes addressing, following the live-server addendum.
+- Use uvicorn's websockets transport in the real local fake so tests need only the project's existing dependencies.
