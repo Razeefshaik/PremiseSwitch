@@ -5,6 +5,7 @@ import argparse
 import asyncio
 import logging
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -18,6 +19,19 @@ from .client import SwitchClient, register_once
 from .state import StateStore
 
 log = logging.getLogger("premise_switch")
+
+
+def build_clearance(state: StateStore):
+    """Signed receipts on CLEAR. Without them Premise still answers; it just can't be enforced."""
+    if os.environ.get("SWITCH_CLEARANCE", "true").lower() == "false":
+        return None
+    try:
+        from .clearance import Clearance, load_or_create_key
+        facts = Path(settings().sandbox_dir) / "facts.yaml"
+        return Clearance(load_or_create_key(state.directory), facts_path=facts)
+    except Exception as exc:
+        log.warning("clearance disabled: %s", type(exc).__name__)
+        return None
 
 
 def build_listener(enabled: bool):
@@ -43,10 +57,12 @@ async def run(no_listen: bool) -> None:
         await register_once(server_url, key, state)
         log.info("registered agent %s", state.agent_id)
     tools = GraphTools(GraphClient.from_settings(settings()))
-    adapter = Adapter(Answerer(tools), build_listener(not no_listen))
+    clearance = build_clearance(state)
+    adapter = Adapter(Answerer(tools, clearance=clearance), build_listener(not no_listen))
     client = SwitchClient(server_url, state, adapter.on_message)
     adapter.gateway = client
-    log.info("connecting agent %s, listen=%s", state.agent_id, adapter.listener is not None)
+    log.info("connecting agent %s, listen=%s, clearance=%s", state.agent_id,
+             adapter.listener is not None, clearance is not None)
     try:
         await client.run()
     finally:
@@ -56,8 +72,14 @@ async def run(no_listen: bool) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--no-listen", action="store_true", help="answer and guard only")
+    parser.add_argument("--print-public-key", action="store_true",
+                        help="print the clearance public key for a repo's .premise/clearance.pub, then exit")
     args = parser.parse_args()
     load_dotenv(override=False)
+    if args.print_public_key:
+        from .clearance import load_or_create_key, public_key_pem
+        print(public_key_pem(load_or_create_key(StateStore().directory)).decode("ascii"), end="")
+        return
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     # httpx logs each request at INFO, which adds nothing here.
     logging.getLogger("httpx").setLevel(logging.WARNING)
