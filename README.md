@@ -146,6 +146,8 @@ links:
   - {account: "switch:<payload.sender>", person: p_anika, status: confirmed}
 ```
 
+Links change the model, so remove them before running the gold evaluation: its recordings were made against the bundled model.
+
 To replay the Listen demo from the start, run `scripts/reset_listen.sh`.
 
 ## Try it
@@ -174,7 +176,7 @@ git commit -am "raise retry window"    # refused: no Premise-Clearance receipt
 
 ## Design decisions
 
-Every choice and its reason is in [`docs/DECISIONS.md`](docs/DECISIONS.md). The ones that shaped the design:
+Every choice and its reason is in [`docs/DECISIONS.md`](docs/DECISIONS.md). An adversarial review of the finished code found nine issues; eight are fixed, with regression tests, and the ninth is a listed limitation ([`docs/reviews/C08-2026-11-07.md`](docs/reviews/C08-2026-11-07.md)). The decisions that shaped the design:
 
 - **Deterministic answers.** A model never decides a verdict and never writes the graph.
 - **"Unchecked" is never a pass.** Graph down, an untracked fact, a mixed check, an `ERROR` verdict, a parse failure: each says so explicitly.
@@ -187,8 +189,8 @@ Every choice and its reason is in [`docs/DECISIONS.md`](docs/DECISIONS.md). The 
 ## Testing
 
 ```bash
-.venv/bin/python -m pytest -q tests/test_switch_*.py       # the Switch integration: 270 tests, no database needed for most
-FALKORDB_PORT=6380 .venv/bin/python -m pytest -q          # everything: about 570 tests, about 2 minutes
+.venv/bin/python -m pytest -q tests/test_switch_*.py       # the Switch integration: about 290 tests, no database needed for most
+FALKORDB_PORT=6380 .venv/bin/python -m pytest -q          # everything: 671 tests, about 2 minutes
 .venv/bin/premise-v2 --port 6380 eval --gold              # extraction gold evaluation
 ```
 
@@ -218,5 +220,6 @@ The repo is a copy of Premise with its history kept, so the dividing line is vis
 - **The receipt check is local.** `git commit --no-verify` bypasses a hook. Next is a server-side check: a CI status or merge gate that verifies receipts.
 - **Receipts don't expire with the graph.** A receipt is valid for 24 hours and doesn't recheck whether the graph has changed since.
 - **Listen is pattern-based.** Without a model, it recognises claims that mention a known entity, term and number together. That's precise, but misses paraphrases.
+- **Delivery is at most once.** A transient post failure is retried once, but a reply lost across a restart isn't resent. Next is an outbox with acknowledgements.
 - **Mattermost only so far.** Other Switch messaging apps should work through the same protocol, but we haven't tested them.
 - **One graph per deployment.** Multi-team graphs and permissions are future work.
