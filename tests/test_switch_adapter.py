@@ -162,3 +162,52 @@ def test_addressed_commands_are_never_recorded_as_evidence():
         return li
     li = run(go())
     assert li.records == [] and li.runs == 0
+
+
+class Verdict:
+    def __init__(self, first):
+        self.first = first
+
+    def respond(self, m):
+        return Reply(f"{self.first}\n- detail\ndeterministic · graph rev 1", m.message_id)
+
+
+class LinkedGateway(FakeGateway):
+    def __init__(self):
+        super().__init__()
+        from premise_switch.contracts import LinkedRoom
+        self.links["room-1"] = [LinkedRoom("room-2", "payments", "payments decisions", True)]
+
+
+def test_blocked_reply_points_at_the_linked_room_and_is_ledgered():
+    async def go():
+        gw = LinkedGateway()
+        await Adapter(Verdict("BLOCKED"), gateway=gw, ledger=True).on_message(message("@premise check a.b = 72"))
+        return gw
+    gw = run(go())
+    (_, reply), = gw.posts
+    assert reply.body.endswith("Related: #payments (payments decisions)")
+    ledger = gw.documents[("room-1", "Premise decision ledger")]
+    assert "BLOCKED" in ledger and "check a.b = 72" in ledger and "@premise" not in ledger
+
+
+def test_clear_reply_has_no_related_line_and_ledger_is_off_by_default():
+    async def go():
+        gw = LinkedGateway()
+        await Adapter(Verdict("CLEAR_WITHIN_SCOPE"), gateway=gw).on_message(message("check a.b = 1"))
+        return gw
+    gw = run(go())
+    assert "Related" not in gw.posts[0][1].body and gw.documents == {}
+
+
+def test_proposal_notice_is_ledgered_after_posting():
+    async def go():
+        gw = FakeGateway()
+        li = FakeListener([ProposalNotice("room-1", "fact=72", "**Proposal:** x 24 → 72.\nmore")])
+        a = Adapter(Echo(), li, gw, debounce_seconds=0, ledger=True)
+        await a.on_message(message("chat", addressed=False))
+        await asyncio.sleep(0.05)
+        await a.aclose()
+        return gw
+    ledger = run(go()).documents[("room-1", "Premise decision ledger")]
+    assert "proposal" in ledger and "fact=72" in ledger

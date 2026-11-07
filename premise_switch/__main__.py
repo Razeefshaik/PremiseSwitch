@@ -16,6 +16,7 @@ from premise.graph.tools import GraphTools
 from .adapter import Adapter
 from .answer import Answerer
 from .client import SwitchClient, register_once
+from .extras import room_join_intro
 from .state import StateStore
 
 log = logging.getLogger("premise_switch")
@@ -58,8 +59,22 @@ async def run(no_listen: bool) -> None:
         log.info("registered agent %s", state.agent_id)
     tools = GraphTools(GraphClient.from_settings(settings()))
     clearance = build_clearance(state)
-    adapter = Adapter(Answerer(tools, clearance=clearance), build_listener(not no_listen))
-    client = SwitchClient(server_url, state, adapter.on_message)
+    answerer = Answerer(tools, clearance=clearance,
+                        reviewer_handles=os.environ.get("SWITCH_REVIEWER_HANDLES") or None)
+    adapter = Adapter(answerer, build_listener(not no_listen),
+                      ledger=os.environ.get("SWITCH_LEDGER", "true").lower() != "false")
+    introduced: set[str] = set()
+
+    async def on_room_join(room_id, data):
+        intro = room_join_intro(room_id, data, agent_id=state.agent_id,
+                                room_name=client._room_names.get(room_id, room_id), seen=introduced)
+        if intro is not None:
+            try:
+                await client.post(room_id, intro)
+            except Exception as exc:
+                log.warning("intro failed in room %s: %s", room_id, type(exc).__name__)
+
+    client = SwitchClient(server_url, state, adapter.on_message, on_room_join=on_room_join)
     adapter.gateway = client
     log.info("connecting agent %s, listen=%s, clearance=%s", state.agent_id,
              adapter.listener is not None, clearance is not None)
