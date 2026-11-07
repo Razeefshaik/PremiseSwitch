@@ -238,3 +238,13 @@ def test_pipeline_failure_is_not_silently_reported_as_no_drift(listeners, monkey
     with pytest.raises(RuntimeError, match="incomplete"):
         listener.run_once()
     assert not listener.journal.state_dir.joinpath("notices.jsonl").exists()
+
+
+def test_notice_counts_other_rooms_evidence_without_quoting_it():
+    drift = {"fact": "paylane.retry_window_hours", "from": 24, "to": 72,
+             "support": "corroborated", "contested": False, "origins": [["k1"], ["k2"]]}
+    evidence = [{"envelope_key": "k1", "status": "asserted", "value": 72, "quote": "here"},
+                {"envelope_key": "k2", "status": "asserted", "value": 72, "quote": "PRIVATE-ELSEWHERE"}]
+    body = _notice_body(drift, {"verdict_preview": "BLOCKED"}, evidence, {"k1"}, {"k1": "anika.rao", "k2": "omar"})
+    assert "anika.rao: “here”" in body and "PRIVATE-ELSEWHERE" not in body and "omar" not in body
+    assert "Plus 1 supporting message from other rooms Premise is in." in body

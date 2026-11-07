@@ -110,8 +110,11 @@ class SwitchWorker:
 
 def _notice_body(drift: dict, proposal: dict, evidence: list[dict], room_keys: set[str],
                  people: dict[str, str] | None = None) -> str:
-    support = [e for e in evidence if e["envelope_key"] in room_keys
-               and e["status"] == "asserted" and e["value"] == drift["to"]]
+    supporting = [e for e in evidence if e["status"] == "asserted" and e["value"] == drift["to"]]
+    support = [e for e in supporting if e["envelope_key"] in room_keys]
+    # The origin count spans rooms, so say where the rest came from. Count it, never quote it:
+    # one room's text must not be posted into another.
+    elsewhere = len(supporting) - len(support)
     ignored = {e["envelope_key"] for e in evidence
                if e["envelope_key"] in room_keys and e["status"] == "instruction"}
     body = (f"**Proposal:** `{drift['fact']}` {drift['from']} → {drift['to']}.\n"
@@ -120,6 +123,8 @@ def _notice_body(drift: dict, proposal: dict, evidence: list[dict], room_keys: s
             f"Ignored injection-like mentions: {len(ignored)}.\n"
             f"Verdict preview: **{proposal['verdict_preview']}**.\nEvidence: ")
     body += "; ".join(f"{(people or {}).get(e['envelope_key'], 'someone')}: “{e['quote']}”" for e in support)
+    if elsewhere:
+        body += f"\nPlus {elsewhere} supporting message{'s' if elsewhere > 1 else ''} from other rooms Premise is in."
     body = body.replace("@", "@\u200b")
     return body if len(body) < 800 else body[:798].rstrip("@") + "…"
 
