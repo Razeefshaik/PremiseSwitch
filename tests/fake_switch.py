@@ -20,6 +20,7 @@ class FakeSwitch:
         self.requests: list[dict[str, Any]] = []
         self.connections: list[dict[str, str]] = []
         self.pongs: list[dict[str, Any]] = []
+        self.heartbeat_evictions: list[str] = []
         self.rooms = {"room-1": "payments"}
         self.participants = {"room-1": self.default_participants()}
         self.histories: dict[str, list[dict[str, Any]]] = {}
@@ -79,11 +80,11 @@ class FakeSwitch:
         @self.app.websocket("/agents/{agent_id}/connection/ws")
         async def connect(ws: WebSocket, agent_id: str):
             await ws.accept()
+            query = dict(ws.query_params)
+            self.requests.append({"operation": "websocket", "arguments": query, "headers": dict(ws.headers)})
             if ws.headers.get("authorization") != "Bearer fake-agent-secret":
                 await ws.close(4401)
                 return
-            query = dict(ws.query_params)
-            self.requests.append({"operation": "websocket", "arguments": query, "headers": dict(ws.headers)})
             self.connections.append(query)
             if self.refusal is not None:
                 await ws.send_json({"event": "refused", "data": {"status": self.refusal, "detail": "refused"}})
@@ -103,6 +104,7 @@ class FakeSwitch:
                 while True:
                     await asyncio.sleep(self.heartbeat_interval)
                     if time.monotonic() - last_pong > self.heartbeat_timeout:
+                        self.heartbeat_evictions.append(room_id)
                         await ws.send_json({"event": "evicted", "data": {"code": "heartbeat_lapsed"}})
                         await ws.close(1000)
                         return

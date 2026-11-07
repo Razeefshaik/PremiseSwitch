@@ -35,3 +35,5 @@ One row per design change, with its reason. Add a dated section per batch of wor
 - Serialize document creation per room/name in the client to prevent concurrent local upserts from creating duplicate documents.
 - Reserve message ids durably before invoking handlers to favor at-most-once reply attempts; a crash between reservation and callback completion cannot guarantee successful application delivery.
 - Room-join callbacks receive `(room_id, frame_data)` and share the ordered room worker, keeping the raw protocol data available without blocking heartbeats.
+- Yield between queued/backfilled messages even when async callbacks finish inline, reject malformed frame identities without disabling the worker, and interrupt stalled discovery on shutdown.
+- Monitor room workers and fail the client visibly if persistence fails; silently maintaining a socket after its delivery worker dies would falsely report a healthy connection.

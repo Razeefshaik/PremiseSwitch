@@ -70,6 +70,7 @@ class SwitchClient:
         self._stop = asyncio.Event()
         self._done = asyncio.Event()
         self._runner: asyncio.Task | None = None
+        self._worker_failure: Exception | None = None
         self._rooms: dict[str, asyncio.Task] = {}
         self._room_names: dict[str, str] = {}
         self._participants: dict[str, list[dict[str, Any]]] = {}
@@ -144,6 +145,9 @@ class SwitchClient:
         for message in sorted(messages.values(), key=lambda m: (m.timestamp_ms, m.message_id)):
             if self.state.remember(room_id, message.message_id):
                 await self._callback(self.on_message, room_id, message)
+            # An async callback may complete without yielding; a long backfill
+            # must still give the socket reader a turn between dispatches.
+            await asyncio.sleep(0)
 
     async def _op(self, operation: str, arguments: dict[str, Any], room_id: str | None = None) -> Any:
         headers = {}
@@ -169,6 +173,11 @@ class SwitchClient:
                 except httpx.RequestError as exc:
                     logger.warning("room_poll_failed exception_type=%s", type(exc).__name__)
                 await self._wait(self.room_poll_seconds)
+        except asyncio.CancelledError:
+            if self._worker_failure is not None:
+                raise self._worker_failure
+            if not self._stop.is_set():
+                raise
         finally:
             self._stop.set()
             for task in self._rooms.values():
@@ -179,10 +188,13 @@ class SwitchClient:
             self._done.set()
 
     async def stop(self) -> None:
+        already_stopping = self._stop.is_set()
         self._stop.set()
         if self._runner is None:
             await self._http.aclose()
         elif asyncio.current_task() is not self._runner:
+            if not already_stopping:
+                self._runner.cancel()
             await self._done.wait()
 
     async def _wait(self, seconds: float) -> None:
@@ -234,7 +246,7 @@ class SwitchClient:
                     async with connect(self._socket_url(room_id),
                                        additional_headers={"Authorization": f"Bearer {self.state.api_key}"},
                                        ping_interval=None, logger=_wire_logger) as ws:
-                        await self._read(room_id, ws, queue)
+                        await self._read_with_worker(room_id, ws, queue, worker)
                 except ConnectionClosed as exc:
                     if exc.rcvd is not None and exc.rcvd.code in {4400, 4401, 4403, 4404, 4409}:
                         self._halt(room_id, "connection_refused")
@@ -242,7 +254,7 @@ class SwitchClient:
                     if exc.response.status_code in {400, 401, 403, 404, 409}:
                         self._halt(room_id, "handshake_refused")
                     logger.warning("socket_failed room_id=%s exception_type=%s", room_id, type(exc).__name__)
-                except (OSError, TimeoutError, ValueError) as exc:
+                except (OSError, TimeoutError, KeyError, TypeError, ValueError) as exc:
                     logger.warning("socket_failed room_id=%s exception_type=%s", room_id, type(exc).__name__)
                 if self.state.room(room_id).get("halted"):
                     break
@@ -251,6 +263,24 @@ class SwitchClient:
         finally:
             worker.cancel()
             await asyncio.gather(worker, return_exceptions=True)
+
+    async def _read_with_worker(self, room_id: str, ws, queue: asyncio.Queue, worker: asyncio.Task) -> None:
+        reader = asyncio.create_task(self._read(room_id, ws, queue))
+        try:
+            done, _ = await asyncio.wait({reader, worker}, return_when=asyncio.FIRST_COMPLETED)
+            if worker in done:
+                # Callback exceptions are already contained. A dead worker here
+                # means persistence or another transport invariant failed.
+                failure = worker.exception() or RuntimeError("Room worker stopped unexpectedly")
+                logger.error("room_worker_failed room_id=%s exception_type=%s", room_id, type(failure).__name__)
+                self._worker_failure = failure
+                self._stop.set()
+                self._runner.cancel()
+                return
+            await reader
+        finally:
+            reader.cancel()
+            await asyncio.gather(reader, return_exceptions=True)
 
     async def _read(self, room_id: str, ws, queue: asyncio.Queue) -> None:
         async for raw in ws:
@@ -311,8 +341,11 @@ class SwitchClient:
                             await self._wait(self._retry_delay(attempt))
                             attempt += 1
                 self.state.advance(room_id, data.get("sequence", frame.get("id")))
+            except (KeyError, TypeError, ValueError) as exc:
+                logger.warning("invalid_frame room_id=%s exception_type=%s", room_id, type(exc).__name__)
             finally:
                 queue.task_done()
+            await asyncio.sleep(0)
 
     async def _callback(self, callback: Callable, room_id: str, *args) -> None:
         try:
@@ -328,6 +361,9 @@ class SwitchClient:
     async def _normalise(self, room_id: str, payload: dict[str, Any], sequence: int = 0,
                          *, addressed: bool | None = None) -> InboundMessage | None:
         sender = payload["sender"]
+        message_id = payload["message_id"]
+        if not isinstance(sender, str) or not isinstance(message_id, str) or not message_id:
+            raise ValueError("Invalid message identity")
         if sender == self.state.agent_id:
             return None
 
@@ -347,7 +383,7 @@ class SwitchClient:
             return None
         return InboundMessage(
             room_id=room_id, room_name=self._room_names.get(room_id, room_id),
-            message_id=payload.get("message_id", payload.get("id", "")), sequence=sequence,
+            message_id=message_id, sequence=sequence,
             sender=sender, sender_name=payload.get("sender_name", sender),
             sender_handle=participant["name"] if participant else sender,
             sender_is_agent=participant is None or participant.get("type") != "user",

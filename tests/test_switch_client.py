@@ -7,6 +7,7 @@ import logging
 import os
 import stat
 import threading
+import time
 from contextlib import asynccontextmanager
 
 import pytest
@@ -84,9 +85,13 @@ async def running_client(server, tmp_path, callback, **kwargs):
     if not state.agent_id:
         state.set_agent("agent-1", "fake-agent-secret")
     client = SwitchClient(server.url, state, callback, room_poll_seconds=0.05, **kwargs)
+    previous = {room: state.room(room)["generation"] for room in server.rooms}
+    initial_connections = len(server.connections)
     task = asyncio.create_task(client.run())
     try:
-        await eventually(lambda: bool(server.sockets) and all(state.room(r)["generation"] for r in server.sockets))
+        await eventually(lambda: len(server.connections) > initial_connections and bool(server.sockets)
+                         and all(state.room(r)["generation"] is not None
+                                 and state.room(r)["generation"] != previous.get(r) for r in server.sockets))
         yield client
     finally:
         await client.stop()
@@ -251,6 +256,7 @@ async def test_handler_failure_logs_only_type_and_keeps_processing(tmp_path, cap
             raise ValueError("private room text fake-agent-secret fake-registration-secret")
 
     with FakeSwitch() as server:
+        await register_once(server.url, "fake-registration-secret", StateStore(tmp_path))
         async with running_client(server, tmp_path, handler):
             await server.send_frame("room-1", server.message())
             await server.send_frame("room-1", server.message("m-2"))
@@ -409,7 +415,7 @@ async def test_pending_gap_is_recovered_on_process_restart(tmp_path):
             await eventually(lambda: len(seen) == 1)
             assert not seen[0].addressed
             assert client.state.room("room-1")["cursor"] == 50
-            assert client.state.room("room-1").get("backfill_pending") is None
+            await eventually(lambda: client.state.room("room-1").get("backfill_pending") is None)
 
 
 @pytest.mark.asyncio
@@ -422,6 +428,95 @@ async def test_fake_rejects_undocumented_operation_arguments(tmp_path):
             with pytest.raises(httpx.HTTPStatusError) as error:
                 await client._op("send_targeted_message", {"thread_id": "root"}, "room-1")
             assert error.value.response.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_malformed_message_does_not_disable_room_worker(tmp_path, caplog):
+    seen = []
+    with FakeSwitch() as server:
+        async with running_client(server, tmp_path, seen.append):
+            malformed = server.message()
+            del malformed["data"]["payload"]["sender"]
+            await server.send_frame("room-1", malformed)
+            await server.send_frame("room-1", server.message("valid"))
+            await eventually(lambda: len(seen) == 1)
+            assert seen[0].message_id == "valid"
+    assert "KeyError" in caplog.text
+    assert "private room text" not in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_fast_async_backfill_yields_to_heartbeats(tmp_path, monkeypatch):
+    seen = []
+
+    async def handler(message):
+        seen.append(message)
+
+    with FakeSwitch() as server:
+        server.histories["room-1"] = [{"root": history_entry(f"m-{n}", timestamp=1793000000000+n),
+                                        "replies": []} for n in range(40)]
+        async with running_client(server, tmp_path, handler) as client:
+            original = client.state.save
+
+            def slow_disk():
+                time.sleep(0.02)
+                original()
+
+            monkeypatch.setattr(client.state, "save", slow_disk)
+            await server.gap("room-1", 50)
+            await eventually(lambda: len(seen) == 40)
+            await asyncio.sleep(0.15)
+            assert not server.heartbeat_evictions
+
+
+@pytest.mark.asyncio
+async def test_stop_interrupts_stalled_room_poll(tmp_path):
+    with FakeSwitch() as server:
+        async with running_client(server, tmp_path, lambda m: None) as client:
+            entered, release = asyncio.Event(), asyncio.Event()
+            original = client._op
+
+            async def stall(operation, arguments, room_id=None):
+                if operation == "list_rooms":
+                    entered.set()
+                    await release.wait()
+                return await original(operation, arguments, room_id)
+
+            client._op = stall
+            await entered.wait()
+            try:
+                await asyncio.wait_for(client.stop(), 0.5)
+                assert client._done.is_set()
+            finally:
+                release.set()
+
+
+@pytest.mark.asyncio
+async def test_persistence_failure_stops_client_instead_of_losing_worker(tmp_path, monkeypatch, caplog):
+    with FakeSwitch() as server:
+        state = StateStore(tmp_path)
+        state.set_agent("agent-1", "fake-agent-secret")
+        seen = []
+        client = SwitchClient(server.url, state, seen.append, room_poll_seconds=0.05)
+        task = asyncio.create_task(client.run())
+        try:
+            await eventually(lambda: bool(server.sockets) and state.room("room-1")["generation"] is not None)
+
+            def fail(*args):
+                raise OSError("simulated state disk failure")
+
+            monkeypatch.setattr(state, "remember", fail)
+            await server.send_frame("room-1", server.message())
+            await eventually(task.done)
+            with pytest.raises(OSError, match="simulated state disk failure"):
+                await task
+            assert not seen
+            assert client._done.is_set() and not client._rooms
+            assert "room_worker_failed" in caplog.text and "OSError" in caplog.text
+            assert "private room text" not in caplog.text
+        finally:
+            await client.stop()
+            await asyncio.gather(task, return_exceptions=True)
 
 
 @pytest.mark.asyncio
