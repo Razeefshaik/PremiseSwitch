@@ -16,21 +16,21 @@ tags: [switch, agents, hackathon, python]
 
 It knows why, listens when things change, and checks what a change would break. Switch keeps the log. Premise keeps the meaning.
 
-![671 tests](https://img.shields.io/badge/tests-671-7cf0c8?style=flat&labelColor=1b1f3d)
-![286 Switch tests](https://img.shields.io/badge/Switch-286%20tests-5b63ff?style=flat&labelColor=1b1f3d)
-![0 gold floor failures](https://img.shields.io/badge/gold-0%20floor%20failures-7cf0c8?style=flat&labelColor=1b1f3d)
+![671 tests](https://img.shields.io/badge/tests-671-2ea043?style=flat&labelColor=555555)
+![286 Switch tests](https://img.shields.io/badge/Switch-286%20tests-2457e6?style=flat&labelColor=555555)
+![0 gold floor failures](https://img.shields.io/badge/gold-0%20floor%20failures-2ea043?style=flat&labelColor=555555)
 
-| Section | What you’ll see |
-| --- | --- |
-| [Watch the demo](‹VIDEO LINK›) | The complete room-to-commit story. |
-| [The company brain](#the-company-brain) | What the company knows, and how it connects. |
-| [Why it only works on Switch](#why-it-only-works-on-switch) | People, agents and decisions in shared rooms. |
-| [See it at Kestrel](#see-it-at-kestrel) | Listen, Guard, Enforce and Remember in action. |
-| [When people leave](#when-people-leave) | Departed owners, cited reasons and next reviewers. |
-| [What else it does](#what-else-it-does) | Capabilities, architecture and build evidence. |
-| [What's next](#whats-next) | Business rules and stronger enforcement. |
-| [Run it yourself](#run-it-yourself) | The tested setup, commands and checks. |
-| [Read the code](https://github.com/Razeefshaik/PremiseSwitch) | The integration and its evidence. |
+### Contents
+
+1. [The company brain](#the-company-brain)
+2. [Why it only works on Switch](#why-it-only-works-on-switch)
+3. [See it at Kestrel](#see-it-at-kestrel)
+4. [When people leave](#when-people-leave)
+5. [What else it does](#what-else-it-does)
+6. [What's next](#whats-next)
+7. [Run it yourself](#run-it-yourself)
+
+[Watch the demo](‹VIDEO LINK›) or [read the code](https://github.com/Razeefshaik/PremiseSwitch).
 
 <div align="center">
 <img src="../media/switch-guard.gif" alt="Premise × Switch checks a change before the coder edits" width="100%">

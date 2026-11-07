@@ -11,41 +11,36 @@
 
 It knows why, listens when things change, and checks what a change would break.
 
-![Tests: 671 passing](https://img.shields.io/badge/tests-671%20passing-7cf0c8?style=flat&labelColor=1b1f3d)
-![Switch integration: 286 tests](https://img.shields.io/badge/Switch%20integration-286%20tests-5b63ff?style=flat&labelColor=1b1f3d)
-![switch-core 0.31.0](https://img.shields.io/badge/switch--core-0.31.0-5b63ff?style=flat&labelColor=1b1f3d)
-![FalkorDB 4.18.3](https://img.shields.io/badge/FalkorDB-4.18.3-5b63ff?style=flat&labelColor=1b1f3d)
-![LLM in answers: none](https://img.shields.io/badge/LLM%20in%20answers-none-5b63ff?style=flat&labelColor=1b1f3d)
-![Receipts: Ed25519](https://img.shields.io/badge/receipts-Ed25519-5b63ff?style=flat&labelColor=1b1f3d)
-![Adversarial review: 8 of 9 fixed](https://img.shields.io/badge/adversarial%20review-8%2F9%20fixed-7cf0c8?style=flat&labelColor=1b1f3d)
-![Blocked stays blocked](https://img.shields.io/badge/verdict-BLOCKED-ff6b8b?style=flat&labelColor=1b1f3d)
-![Unknown stays unchecked](https://img.shields.io/badge/unknown-unchecked-ffd27a?style=flat&labelColor=1b1f3d)
+![Tests: 671 passing](https://img.shields.io/badge/tests-671%20passing-2ea043?style=flat&labelColor=555555)
+![Switch integration: 286 tests](https://img.shields.io/badge/Switch%20integration-286%20tests-2457e6?style=flat&labelColor=555555)
+![switch-core 0.31.0](https://img.shields.io/badge/switch--core-0.31.0-2457e6?style=flat&labelColor=555555)
+![FalkorDB 4.18.3](https://img.shields.io/badge/FalkorDB-4.18.3-2457e6?style=flat&labelColor=555555)
+![LLM in answers: none](https://img.shields.io/badge/LLM%20in%20answers-none-2457e6?style=flat&labelColor=555555)
+![Receipts: Ed25519](https://img.shields.io/badge/receipts-Ed25519-2457e6?style=flat&labelColor=555555)
+![Adversarial review: 8 of 9 fixed](https://img.shields.io/badge/adversarial%20review-8%2F9%20fixed-2ea043?style=flat&labelColor=555555)
+![Blocked stays blocked](https://img.shields.io/badge/verdict-BLOCKED-e11d48?style=flat&labelColor=555555)
+![Unknown stays unchecked](https://img.shields.io/badge/unknown-unchecked-ffb900?style=flat&labelColor=555555)
 
 <p>
-  <a href="‹VIDEO LINK›"><img src="https://img.shields.io/badge/Watch_the_demo-Under_3_minutes-5b63ff?style=for-the-badge&labelColor=1b1f3d&logo=youtube&logoColor=white" alt="Watch the demo, under 3 minutes"></a>
-  <a href="#the-switch-workflow"><img src="https://img.shields.io/badge/How_it_uses-Switch-ff6b8b?style=for-the-badge&labelColor=1b1f3d&logoColor=white" alt="The Premise × Switch workflow"></a>
-  <a href="#run-it-yourself"><img src="https://img.shields.io/badge/Run_it-Your_own_Switch-7cf0c8?style=for-the-badge&labelColor=1b1f3d&logo=docker&logoColor=white" alt="Run it yourself"></a>
-  <a href="docs/blog/premise-switch.md"><img src="https://img.shields.io/badge/Read-The_build_story-ffd27a?style=for-the-badge&labelColor=1b1f3d&logo=devdotto&logoColor=white" alt="The build story"></a>
+  <a href="‹VIDEO LINK›"><img src="https://img.shields.io/badge/Watch_the_demo-Under_3_minutes-ff0000?style=for-the-badge&labelColor=555555&logo=youtube&logoColor=white" alt="Watch the demo, under 3 minutes"></a>
+  <a href="#the-switch-workflow"><img src="https://img.shields.io/badge/How_it_uses-Switch-2457e6?style=for-the-badge&labelColor=555555&logoColor=white" alt="The Premise × Switch workflow"></a>
+  <a href="#run-it-yourself"><img src="https://img.shields.io/badge/Run_it-Your_own_Switch-1e90ff?style=for-the-badge&labelColor=555555&logo=docker&logoColor=white" alt="Run it yourself"></a>
+  <a href="docs/blog/premise-switch.md"><img src="https://img.shields.io/badge/Read-The_build_story-ffb900?style=for-the-badge&labelColor=555555&logo=devdotto&logoColor=white" alt="The build story"></a>
 </p>
-
-<table>
-<thead><tr><th>Section</th><th>What you’ll see</th></tr></thead>
-<tbody>
-<tr><td><a href="#the-company-brain">The company brain</a></td><td>What the company knows, and how it connects.</td></tr>
-<tr><td><a href="#why-it-only-works-on-switch">Why it only works on Switch</a></td><td>People, agents and decisions in shared rooms.</td></tr>
-<tr><td><a href="#see-it-at-kestrel">See it at Kestrel</a></td><td>Listen, Guard, Enforce and Remember in action.</td></tr>
-<tr><td><a href="#when-people-leave">When people leave</a></td><td>Departed owners, cited reasons and next reviewers.</td></tr>
-<tr><td><a href="#what-else-it-does">What else it does</a></td><td>Capabilities, architecture and build evidence.</td></tr>
-<tr><td><a href="#architecture">Architecture</a></td><td>The transport, reasoning and receipt path.</td></tr>
-<tr><td><a href="#the-evidence-against-each-judging-criterion">Judging criteria</a></td><td>Each claim mapped to repository evidence.</td></tr>
-<tr><td><a href="#whats-next">What's next</a></td><td>Business rules and stronger enforcement.</td></tr>
-<tr><td><a href="#run-it-yourself">Run it yourself</a></td><td>The tested setup, commands and checks.</td></tr>
-</tbody>
-</table>
 
 <sub>Built for <b>Flip the Switch</b> by WeMakeDevs × Switch · Track 1: Best Business Workflow</sub>
 
 </div>
+
+### Contents
+
+1. [The company brain](#the-company-brain)
+2. [Why it only works on Switch](#why-it-only-works-on-switch)
+3. [See it at Kestrel](#see-it-at-kestrel)
+4. [When people leave](#when-people-leave)
+5. [What else it does](#what-else-it-does)
+6. [What's next](#whats-next)
+7. [Run it yourself](#run-it-yourself)
 
 <br>
 
