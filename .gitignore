@@ -10,6 +10,8 @@ scratch/
 .env.*
 !.env.example
 .runtime/
+*.pem
+*.key
 artifacts/
 bench/cache/
 site/

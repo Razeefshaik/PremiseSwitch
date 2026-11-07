@@ -17,7 +17,7 @@ class Settings:
     graph_name: str = field(default_factory=lambda: os.getenv("GRAPH_NAME", "premise_kestrel"))
     sandbox_dir: str = field(default_factory=lambda: os.getenv("SANDBOX_DIR", "sandbox/kestrel-platform"))
     since_days: int = field(default_factory=lambda: int(os.getenv("SINCE_DAYS", "180")))
-    sandbox_repo: str = field(default_factory=lambda: os.getenv("SANDBOX_REPO", "Razeefshaik/kestrel-platform"))
+    sandbox_repo: str = field(default_factory=lambda: os.getenv("SANDBOX_REPO", "Razeefshaik/premise-switch"))
     sandbox_clone_dir: str = field(default_factory=lambda: os.getenv("SANDBOX_CLONE_DIR", ".runtime/kestrel"))
     github_token: str = field(default_factory=lambda: os.getenv("GITHUB_TOKEN", os.getenv("GH_TOKEN", "")), repr=False)
     anthropic_api_key: str = field(default_factory=lambda: os.getenv("ANTHROPIC_API_KEY", ""), repr=False)
