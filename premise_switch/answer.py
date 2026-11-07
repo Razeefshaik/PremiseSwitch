@@ -11,6 +11,10 @@ from .format import HELP, UNAVAILABLE, escape, format_check, format_result
 from .router import ParseError, Route, parse
 
 
+UNPARSED = ("Couldn't parse that command; this change is unchecked. Send only the command, for example: "
+            "check paylane.retry_window_hours = 72\ndeterministic · graph rev unknown")
+
+
 class Answerer:
     def __init__(self, tools: ToolBackend, clock: Callable[[], float] = time.monotonic):
         self.tools = tools
@@ -68,6 +72,21 @@ class Answerer:
             return format_check(result, names)
         return format_result(name, result)
 
+    def _admit(self, room_id: str, thread_id: str) -> bool:
+        """Count one agent reply against the sliding cap. Caller holds the lock."""
+        now = self.clock()
+        # Expire idle threads as well, avoiding unbounded room history.
+        for key, replies in list(self._agent_replies.items()):
+            while replies and now - replies[0] >= 600:
+                replies.popleft()
+            if not replies:
+                del self._agent_replies[key]
+        replies = self._agent_replies.setdefault((room_id, thread_id), deque())
+        if len(replies) >= 6:
+            return False
+        replies.append(now)  # Unavailable replies count toward the cap too.
+        return True
+
     def respond(self, message: InboundMessage) -> Reply | None:
         """Never propagate tool/parser/formatter failures or echo exception details."""
         thread_id = None
@@ -79,28 +98,21 @@ class Answerer:
             try:
                 route = parse(message.body)
             except (ParseError, ValueError):
+                # An agent that tried a command gets the syntax, or it would wait forever for a
+                # verdict. The thread cap bounds any retry loop.
                 if message.sender_is_agent:
-                    return None
-                return Reply("Couldn't parse that command; this change is unchecked. "
-                             "Use help for syntax and accepted values.\ndeterministic · graph rev unknown", thread_id)
+                    with self._lock:
+                        if not self._admit(message.room_id, thread_id):
+                            return None
+                    return Reply(escape(UNPARSED), thread_id, (message.sender_handle,))
+                return Reply(UNPARSED, thread_id)
             if message.sender_is_agent and not route.explicit:
                 return None
             if message.sender_is_agent:
                 mention = (message.sender_handle,)
             with self._lock:
-                if message.sender_is_agent:
-                    now = self.clock()
-                    # Expire idle threads as well, avoiding unbounded room history.
-                    for key, replies in list(self._agent_replies.items()):
-                        while replies and now - replies[0] >= 600:
-                            replies.popleft()
-                        if not replies:
-                            del self._agent_replies[key]
-                    key = (message.room_id, thread_id)
-                    replies = self._agent_replies.setdefault(key, deque())
-                    if len(replies) >= 6:
-                        return None
-                    replies.append(now)  # Unavailable replies count toward the cap too.
+                if message.sender_is_agent and not self._admit(message.room_id, thread_id):
+                    return None
                 try:
                     body = self._body(route)
                 except Exception:

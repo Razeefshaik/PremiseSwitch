@@ -75,6 +75,8 @@ def parse(text: str) -> Route:
     if not isinstance(text, str) or len(text) > 2000:
         raise ParseError("Use 1 to 2000 characters.")
     text = re.sub(r"(?<![\w@])@premise\b", "", text, flags=re.I).strip()
+    # Agents often wrap commands in Markdown code spans.
+    text = text.replace("`", "").strip()
     if not text:
         raise ParseError("Supply a command or question.")
     if text.lower() == "help":

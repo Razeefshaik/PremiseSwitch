@@ -114,11 +114,31 @@ def lineage_result():
             "sources": [{"path": "docs/adr.md", "line": 12}]}
 
 
-@pytest.mark.parametrize("body", ["thanks", "G_DEDUPE", "tell me about ADR-012", "health", "orphaned", "check a.b = nope"])
-def test_agents_are_silent_on_freeform_and_parse_errors(body):
+@pytest.mark.parametrize("body", ["thanks", "G_DEDUPE", "tell me about ADR-012", "health", "orphaned"])
+def test_agents_are_silent_on_freeform(body):
     tools = FakeTools()
     assert Answerer(tools).respond(message(body, sender_is_agent=True)) is None
     assert tools.calls == []
+
+
+@pytest.mark.parametrize("body", ["check a.b = nope", "check a.b = 72 before I apply", "please check a.b = 72"])
+def test_agent_with_a_malformed_command_gets_syntax_never_a_pass(body):
+    tools = FakeTools()
+    reply = Answerer(tools).respond(message(body, sender_is_agent=True, sender_handle="coder.razeef"))
+    assert "unchecked" in reply.body and "check paylane.retry_window_hours = 72" in reply.body
+    assert reply.mention == ("coder.razeef",) and tools.calls == []
+
+
+def test_malformed_agent_commands_are_capped_per_thread():
+    answerer = Answerer(FakeTools(), clock=lambda: 0.0)
+    ask = message("check a.b = nope", sender_is_agent=True, thread_id="t-1")
+    assert [answerer.respond(ask) is not None for _ in range(7)] == [True] * 6 + [False]
+
+
+def test_markdown_code_spans_are_accepted():
+    tools = FakeTools({"check_change": {"verdict": "BLOCKED", "graph_rev": 1, "reasons": [], "not_holding": [], "decisions": []}})
+    reply = Answerer(tools).respond(message("@premise `check a.b = 72`"))
+    assert reply.body.startswith("BLOCKED") and tools.calls[0][1] == {"changes": [{"fact": "a.b", "value": 72}]}
 
 
 def test_addressed_thread_and_mention_rules():
