@@ -26,7 +26,7 @@ def _text(value: Any, limit: int = 200) -> str:
 
 
 def _finish(lines: list[str], revision: Any = None, tail: str = "") -> str:
-    footer = f"deterministic · graph rev {_text(revision if revision is not None else 'unknown', 24)}"
+    footer = "deterministic" if revision is None else f"deterministic · graph rev {_text(revision, 24)}"
     reserved = "\n" + (tail + "\n" if tail else "") + footer
     budget = LIMIT - len(reserved)
     body = "\n".join(lines)
@@ -92,9 +92,11 @@ def format_check(result: dict[str, Any], names: dict[str, str] | None = None) ->
     elif verdict == "NEEDS_REVIEW":
         lines.append("Resolve missing or unverified evidence before applying this change.")
     decisions = result.get("decisions", [])
-    lines.append("Affected decisions: " + (", ".join(_text(d['id'], 70) for d in decisions) or "none returned"))
-    reviewers = [person for decision in decisions for person in decision.get("reviewers", [])]
-    lines.append("Reviewers: " + _people(reviewers, names or result.get("names", {})))
+    # A clear result often touches no decision; "no reviewer found" there would read as a warning.
+    if decisions or verdict != "CLEAR_WITHIN_SCOPE":
+        lines.append("Affected decisions: " + (", ".join(_text(d['id'], 70) for d in decisions) or "none returned"))
+        reviewers = [person for decision in decisions for person in decision.get("reviewers", [])]
+        lines.append("Reviewers: " + _people(reviewers, names or result.get("names", {})))
     tail = ""
     fixes = result.get("verified_fixes", [])
     if fixes:
@@ -151,5 +153,6 @@ def format_result(name: str, rows: Any) -> str:
         lines.extend(f"- {_text(row.get('text', ''), 260)}" for row in rows[:4])
     if not lines:
         lines = [NOT_FOUND]
+    lines = list(dict.fromkeys(lines))
     lines.extend(_citations(rows))
     return _finish(lines, rows.get("graph_rev") if isinstance(rows, dict) else None)

@@ -232,8 +232,8 @@ def test_check_enriches_reviewer_names_only_through_calls():
     ("impact A_RETRY_WINDOW", [("impact_if_broken", {"id": "A_RETRY_WINDOW"})]),
     ("health", [("guarantee_health", {})]),
     ("orphaned decisions", [("orphaned_decisions", {})]),
-    ("a topic", [("resolve", {"query": "a topic", "limit": 5}), ("decision_lineage", {"id": "ADR-012"})]),
-    ("who is the owner", [("resolve", {"query": "who is the owner", "limit": 5}), ("who_knows", {"id": "svc_webhook"})]),
+    ("a topic", [("resolve", {"query": "topic", "limit": 5}), ("decision_lineage", {"id": "ADR-012"})]),
+    ("who is the owner", []),
 ])
 def test_execute_routes_and_deterministic_fallback(text, expected):
     resolved = [{"id": "svc_webhook", "labels": ["Service"]}, {"id": "ADR-012", "labels": ["Decision"]},
@@ -242,7 +242,8 @@ def test_execute_routes_and_deterministic_fallback(text, expected):
         resolved = resolved[1:2]
     tools = FakeTools({"resolve": resolved, "decision_lineage": lineage_result()})
     assert Answerer(tools).respond(message(text)) is not None
-    assert tools.calls == expected
+    # Looking up a departed owner's name is covered by its own test.
+    assert [c for c in tools.calls if c != ("resolve", {"query": "p_old", "limit": 1})] == expected
 
 
 def test_fallback_service_and_search_evidence_citations():
@@ -312,3 +313,33 @@ def test_complete_clear_result_keeps_scope_limit_and_revision():
 def test_long_citation_path_is_omitted_instead_of_corrupted():
     body = format_result("search_evidence", [{"text": "evidence", "path": "x" * 200 + ".md", "line": 2}])
     assert "…:2" not in body and "Sources:" not in body
+
+
+def test_unrelated_question_is_not_answered_from_common_words():
+    seen = []
+
+    def resolve(arguments):
+        seen.append(arguments["query"])
+        return []
+    tools = FakeTools({"resolve": resolve, "search_evidence": []})
+    reply = Answerer(tools).respond(message("what is the weather"))
+    assert seen == ["weather"] and "wasn't found" in reply.body
+
+
+def test_only_common_words_touches_no_tool():
+    tools = FakeTools()
+    assert "wasn't found" in Answerer(tools).respond(message("who is it")).body and tools.calls == []
+
+
+def test_departed_owners_are_shown_by_name():
+    lineage = {"decision": {"id": "ADR-012", "title": "T", "status": "accepted"}, "active_accountable": [],
+               "unavailable": ["p_lena"], "paths": [], "reviewers": [], "names": {}, "sources": []}
+    tools = FakeTools({"decision_lineage": lineage,
+                       "resolve": [{"id": "p_lena", "labels": ["Person"], "text": "p_lena Lena Fischer"}]})
+    assert "Lena Fischer" in Answerer(tools).respond(message("why ADR-012")).body
+
+
+def test_clear_with_no_decisions_has_no_reviewer_warning():
+    result = {"verdict": "CLEAR_WITHIN_SCOPE", "graph_rev": 1, "reasons": [], "not_holding": [], "decisions": []}
+    body = Answerer(FakeTools({"check_change": result})).respond(message("check a.b = 1")).body
+    assert body.startswith("CLEAR_WITHIN_SCOPE") and "reviewer" not in body.lower()

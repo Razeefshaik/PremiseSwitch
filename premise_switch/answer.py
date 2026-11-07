@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from collections import deque
+import re
 import threading
 import time
 from typing import Any, Callable
@@ -12,7 +13,16 @@ from .router import ParseError, Route, parse
 
 
 UNPARSED = ("Couldn't parse that command; this change is unchecked. Send only the command, for example: "
-            "check paylane.retry_window_hours = 72\ndeterministic · graph rev unknown")
+            "check paylane.retry_window_hours = 72\ndeterministic")
+# Fulltext matches on these alone would answer unrelated questions with confident nonsense.
+STOPWORDS = frozenset("""a about all am an and any are as at be been but by can could did do does for from had has
+    have how i if in is it its me my of on or our please should so tell than that the their them then there these
+    they this to us was we were what when where which who whom whose why will with would you your knows owns owner
+    own review""".split())
+
+
+def content_terms(query: str) -> str:
+    return " ".join(w for w in re.findall(r"[A-Za-z0-9_.-]+", query) if w.lower() not in STOPWORDS)
 
 
 class Answerer:
@@ -41,12 +51,14 @@ class Answerer:
     def _execute(self, route: Route) -> tuple[str, Any]:
         name, args = route.name, route.arguments
         if name in {"ownership", "impact", "question"}:
-            query = args["query"]
+            query = content_terms(args["query"])
+            if not query:
+                return "resolve", []
             if name == "impact":
                 selected = self._resolved(query, ("Assumption",))
                 target = "impact_if_broken"
             else:
-                service_first = name == "ownership" or any(word in query.lower() for word in ("who", "owns", "owner", "knows"))
+                service_first = name == "ownership" or any(word in args["query"].lower() for word in ("who", "owns", "owner", "knows"))
                 selected = self._resolved(query, ("Service", "Decision") if service_first else ("Decision", "Service"))
                 target = "decision_lineage" if selected and "Decision" in selected["labels"] else "who_knows"
             if selected:
@@ -58,7 +70,7 @@ class Answerer:
 
     def _body(self, route: Route) -> str:
         if route.name == "help":
-            return HELP + "\ndeterministic · graph rev unknown"
+            return HELP + "\ndeterministic"
         name, result = self._execute(route)
         if name == "check_change" and result:
             # R_UNTRACKED must be handled before enrichment, including mixed checks.
@@ -70,7 +82,19 @@ class Answerer:
                 if lineage:
                     names.update(lineage.get("names", {}))
             return format_check(result, names)
+        if name == "decision_lineage" and isinstance(result, dict):
+            result = self._with_departed_names(result)
         return format_result(name, result)
+
+    def _with_departed_names(self, lineage: dict[str, Any]) -> dict[str, Any]:
+        """decision_lineage names only active people; "both owners left" needs the others too."""
+        names = dict(lineage.get("names", {}))
+        for person in lineage.get("unavailable", []):
+            if person not in names:
+                for row in self._call("resolve", {"query": person, "limit": 1}) or []:
+                    if row.get("id") == person and str(row.get("text", "")).startswith(person + " "):
+                        names[person] = row["text"][len(person) + 1:]
+        return {**lineage, "names": names}
 
     def _admit(self, room_id: str, thread_id: str) -> bool:
         """Count one agent reply against the sliding cap. Caller holds the lock."""
