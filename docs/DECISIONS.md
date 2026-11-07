@@ -37,3 +37,17 @@ One row per design change, with its reason. Add a dated section per batch of wor
 - Room-join callbacks receive `(room_id, frame_data)` and share the ordered room worker, keeping the raw protocol data available without blocking heartbeats.
 - Yield between queued/backfilled messages even when async callbacks finish inline, reject malformed frame identities without disabling the worker, and interrupt stalled discovery on shutdown.
 - Monitor room workers and fail the client visibly if persistence fails; silently maintaining a socket after its delivery worker dies would falsely report a healthy connection.
+## 2026-11-07 C03 answer and guard
+
+| Decision | By | Status | Reason |
+| --- | --- | --- | --- |
+| Parse whole assignments with a bounded scalar grammar and mark explicit commands separately | C03 | Accept | Reject ambiguous or malformed changes; free-form fallback must remain silent for agents |
+| Bound summaries to 1500 characters, preserving verdict, footer, and a whole verified fix alternative | C03 | Accept | Truncation must not erase the verdict or turn a partial remedy into pasteable advice |
+| Render only path:line citations and escape every graph-text mention with a zero-width space | C03 | Accept | Replies should cite local evidence without waking agents through echoed graph content |
+| Treat any untracked reason as unchecked even when a result claims clear | C03 | Accept | Mixed proposals cannot establish safety outside the tracked scope |
+| Enrich check reviewer ids via decision_lineage calls, falling back to ids for missing names | C03 | Accept | ToolBackend exposes no raw graph query or names registry; never invent people |
+| Serialize responder admission and cap all agent replies per room/thread at six per sliding ten minutes | C03 | Accept | to_thread calls can race; failures count too, and idle budgets expire |
+| Catch parser, tool, and formatter failures without logging text or exception details | C03 | Accept | Room input is untrusted and any failed assessment must remain explicitly unchecked |
+| Commit real kestrel regression tests without starting Docker on this Windows machine | C03 | Accept | Docker engine is unavailable; the card permits server review of unrun graph tests |
+| Reject incomplete or internally contradictory clear results as unavailable | C03 | Accept | A clear token alone cannot override missing assessment rows, a broken chain, or review reasons |
+| Omit oversized citation paths instead of abbreviating them | C03 | Accept | A truncated path is not an accurate path:line citation |
