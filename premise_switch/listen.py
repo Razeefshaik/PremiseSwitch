@@ -9,6 +9,7 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 import hashlib
 import json
+import logging
 import os
 from pathlib import Path
 import threading
@@ -23,6 +24,8 @@ from premise_v2.gateway import redact
 from premise_v2.pipeline import Pipeline
 
 from .contracts import InboundMessage, ProposalNotice
+
+MAX_BODY = 100_000
 
 
 def _read_jsonl(path: Path) -> list[dict]:
@@ -58,6 +61,11 @@ class SwitchJournal:
 
     def record(self, message: InboundMessage) -> None:
         if message.sender_is_agent:
+            return
+        # The v2 Envelope caps text at 100,000 characters. A longer message would be journaled,
+        # then fail every later load and block the room's other evidence behind it.
+        if not isinstance(message.body, str) or len(message.body) > MAX_BODY:
+            logging.getLogger(__name__).warning("listen skipped an oversized message in room %s", message.room_id)
             return
         with self._lock:
             if any(row["message_id"] == message.message_id for row in self.messages()):
