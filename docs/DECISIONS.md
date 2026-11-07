@@ -83,3 +83,11 @@ One row per design change, with its reason. Add a dated section per batch of wor
 | Decision | By | Status | Reason |
 | --- | --- | --- | --- |
 | Refreeze `extract/__init__.py`, `identity.py` and `entities.py` in `fixtures/v2/gold/recordings/freeze.json` | Claude | Accept | C04 changed them on purpose: whole-message injection taint, and `switch` as a source. They weren't tuned on holdout data. `premise-v2 eval --gold` re-run on 2026-11-07 after the change: no floor failures, and the replay test still requires zero injected grounded candidates |
+
+## 2026-11-07 C07 extras
+
+| Decision | By | Status | Reason |
+| --- | --- | --- | --- |
+| Async ledger uses RoomGateway upsert by a fixed name, serializes each room, and retains newest rows in memory | C07 | Accept | The client owns document IDs; concurrent records must not lose rows or create duplicates, while history persistence is outside this helper's contract |
+| Cap ledger at 100 rows and 16000 UTF-8 bytes, trim old rows and bound escaped cells | C07 | Accept | Stay below Switch's documented 1 MiB room-document content limit even with multibyte text; neutralize mentions and table markup |
+| Ledger failures return false and log only exception type | C07 | Accept | Optional document updates must not interrupt a verdict or leak exception bodies |
