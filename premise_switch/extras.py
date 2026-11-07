@@ -41,8 +41,25 @@ class DecisionLedger:
         self._rows: dict[str, list[str]] = defaultdict(list)
         self._locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
 
-    async def record(self, room_id: str, kind: str, summary: str | Mapping[str, Any]) -> bool:
-        """Return success; retain bounded rows for the next attempt on failure."""
+    async def flush(self, room_id: str) -> bool:
+        """Write the room's rows as one document update."""
+        try:
+            async with self._locks[room_id]:
+                await self.gateway.upsert_document(
+                    room_id, LEDGER_NAME, "Recent Premise verdicts and proposals, newest first.",
+                    "Historical summaries only. Ask for a fresh check before editing config; a human approves merges.",
+                    _HEADER + "".join(self._rows[room_id]))
+            return True
+        except Exception as exc:
+            log.warning("ledger_failed exception_type=%s", type(exc).__name__)
+            return False
+
+    async def record(self, room_id: str, kind: str, summary: str | Mapping[str, Any], *, write: bool = True) -> bool:
+        """Return success; retain bounded rows for the next attempt on failure.
+
+        write=False only stores the row, for callers that batch updates with flush(). Every
+        document update posts a notice in the room, so batching keeps rooms readable.
+        """
         try:
             async with self._locks[room_id]:
                 if kind not in {"verdict", "proposal"}:
@@ -61,6 +78,8 @@ class DecisionLedger:
                 while len((_HEADER + "".join(rows)).encode("utf-8")) > LEDGER_MAX_BYTES:
                     rows.pop()
                 self._rows[room_id] = rows
+                if not write:
+                    return True
                 await self.gateway.upsert_document(
                     room_id, LEDGER_NAME, "Recent Premise verdicts and proposals, newest first.",
                     "Historical summaries only. Ask for a fresh check before editing config; a human approves merges.",

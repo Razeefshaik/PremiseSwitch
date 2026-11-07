@@ -27,11 +27,15 @@ class Adapter:
     """
 
     def __init__(self, responder: Responder, listener: Listener | None = None,
-                 gateway: RoomGateway | None = None, debounce_seconds: float = 3.0, ledger: bool = False):
+                 gateway: RoomGateway | None = None, debounce_seconds: float = 3.0, ledger: bool = False,
+                 ledger_flush_seconds: float = 90.0):
         self.responder, self.listener, self.gateway = responder, listener, gateway
         # The ledger needs the gateway, which is set after construction.
         self.use_ledger = ledger
         self._ledger: DecisionLedger | None = None
+        # Each document write posts a notice in the room, so rows are written in batches.
+        self.ledger_flush_seconds = ledger_flush_seconds
+        self._flushes: dict[str, asyncio.Task] = {}
         self.debounce_seconds = debounce_seconds
         self._debounce: asyncio.Task | None = None
         self._listen_lock = asyncio.Lock()
@@ -81,7 +85,13 @@ class Adapter:
             return
         if self._ledger is None:
             self._ledger = DecisionLedger(self.gateway)
-        await self._ledger.record(room_id, kind, summary)
+        await self._ledger.record(room_id, kind, summary, write=False)
+        if room_id not in self._flushes or self._flushes[room_id].done():
+            self._flushes[room_id] = asyncio.create_task(self._flush_later(room_id))
+
+    async def _flush_later(self, room_id: str) -> None:
+        await asyncio.sleep(self.ledger_flush_seconds)
+        await self._ledger.flush(room_id)
 
     @staticmethod
     def _unavailable(message: InboundMessage) -> Reply | None:

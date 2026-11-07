@@ -182,7 +182,9 @@ class LinkedGateway(FakeGateway):
 def test_blocked_reply_points_at_the_linked_room_and_is_ledgered():
     async def go():
         gw = LinkedGateway()
-        await Adapter(Verdict("BLOCKED"), gateway=gw, ledger=True).on_message(message("@premise check a.b = 72"))
+        a = Adapter(Verdict("BLOCKED"), gateway=gw, ledger=True, ledger_flush_seconds=0)
+        await a.on_message(message("@premise check a.b = 72"))
+        await asyncio.sleep(0.05)
         return gw
     gw = run(go())
     (_, reply), = gw.posts
@@ -204,10 +206,29 @@ def test_proposal_notice_is_ledgered_after_posting():
     async def go():
         gw = FakeGateway()
         li = FakeListener([ProposalNotice("room-1", "fact=72", "**Proposal:** x 24 → 72.\nmore")])
-        a = Adapter(Echo(), li, gw, debounce_seconds=0, ledger=True)
+        a = Adapter(Echo(), li, gw, debounce_seconds=0, ledger=True, ledger_flush_seconds=0)
         await a.on_message(message("chat", addressed=False))
         await asyncio.sleep(0.05)
         await a.aclose()
         return gw
     ledger = run(go()).documents[("room-1", "Premise decision ledger")]
     assert "proposal" in ledger and "fact=72" in ledger
+
+
+def test_ledger_writes_are_batched_into_one_document_update():
+    class Counting(FakeGateway):
+        writes = 0
+
+        async def upsert_document(self, *args):
+            Counting.writes += 1
+            return await super().upsert_document(*args)
+
+    async def go():
+        gw = Counting()
+        a = Adapter(Verdict("BLOCKED"), gateway=gw, ledger=True, ledger_flush_seconds=0.05)
+        for i in range(3):
+            await a.on_message(message(f"@premise check a.b = {i}", message_id=f"m-{i}"))
+        await asyncio.sleep(0.15)
+        return gw
+    gw = run(go())
+    assert Counting.writes == 1 and gw.documents[("room-1", "Premise decision ledger")].count("BLOCKED") == 3
