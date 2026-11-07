@@ -302,7 +302,7 @@ Premise existed before this hackathon: a decision graph on FalkorDB ([original p
 
 ## What's next
 
-**Business rules are next ? not built yet.** A decision is a reason, an owner and a promise, so the same format fits business rules next: refund windows, pricing, partner terms. Those business-rule examples are roadmap ideas; they are not implemented or tested.
+**Business rules are next — not built yet.** A decision is a reason, an owner and a promise, so the same format fits business rules next: refund windows, pricing, partner terms. Those business-rule examples are roadmap ideas; they are not implemented or tested.
 
 - **The receipt check is local.** `git commit --no-verify` bypasses a hook. Next is a server-side check: a CI status or merge gate that verifies receipts.
 - **Receipts don't expire with the graph.** A receipt is valid for 24 hours and doesn't recheck whether the graph has changed since.
