@@ -15,6 +15,7 @@ dependencies = [
   "mcp>=1.20,<2",
   "python-dotenv>=1,<2",
   "rapidfuzz>=3.9,<4",
+  "websockets>=13",
 ]
 
 [project.optional-dependencies]
@@ -25,6 +26,7 @@ benchmark = ["numpy==2.5.4", "onnxruntime==1.31.0", "tokenizers==0.23.3"]
 [project.scripts]
 premise = "premise.cli:main"
 premise-v2 = "premise_v2.cli:main"
+premise-switch = "premise_switch.__main__:main"
 
 [build-system]
 requires = ["setuptools>=68"]
