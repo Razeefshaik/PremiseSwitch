@@ -11,7 +11,7 @@ Premise as a custom Switch agent, built from a copy of Premise at `f11f34e`. Tra
 - **main:** C01 foundation complete. Baseline suite: 380 passed on the VM.
 - **VM:** Premise answers the canonical check (BLOCKED, then CLEAR with the fix). `premise` is registered once. Live ops match `docs/SWITCH_PROTOCOL.md`.
 - **Active cards:** C02, C03, C04, C05 ready or in progress.
-- **Blockers:** Razeef must set `premise` addressing in Console.
+- **Blockers:** none.
 
 ## Next
 

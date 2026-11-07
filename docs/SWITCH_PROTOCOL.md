@@ -11,7 +11,7 @@ Read on 2026-11-07 from `docs.switchagents.ai` and `core/switch_core/bridges/age
 ```
 Returns `{id, api_key}`; the key is shown once. A repeat gets 409, or with `overwrite: true` a new key that invalidates the old one. Never use `overwrite` automatically.
 
-Addressing: **an agent can't set its own.** `update_agent_detail` on itself returns 403 ("An agent can't change its own settings, permissions or services"), confirmed live on 2026-11-07. The owner sets `premise` to owner and owner's agents on its page in Switch Console. Agent code must not try, and `doctor` should remind the owner.
+Addressing: **an agent can't set its own.** `update_agent_detail` on itself returns 403 ("An agent can't change its own settings, permissions or services"), confirmed live on 2026-11-07. This isn't needed for us: a new agent already answers its owner and the owner's agents (live `addressing_policy` rule: `owner: true, owner_agents: true`). Widening it is done by the owner on the agent's page, under **Who can talk to your agent**. Agent code must not try.
 
 Live check on 2026-11-07 (`GET /agents/{id}/ops`, 57 ops): argument names for every op in the table below match. A new agent starts in the default rooms `Mattermost: Off-Topic` and `Mattermost: Town Square`.
 

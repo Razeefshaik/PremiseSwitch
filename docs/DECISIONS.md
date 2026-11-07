@@ -19,4 +19,4 @@ One row per design change, with its reason. Add a dated section per batch of wor
 | Original handoff stays outside the repo, in the folder above it | Razeef | Accept | It holds infrastructure details and the repo goes public |
 | The repo is the `PremiseSwitch` folder itself; notes and prompts sit one level up | Razeef | Accept | Razeef codes in `PremiseSwitch` and keeps working files outside it |
 | Everyone commits as they build, one commit per working step, no squashing | Razeef | Accept | The history should give a clear view of how the work was done |
-| Addressing is set by the owner in Console, not by the agent | Claude | Accept | The server returns 403 when an agent changes its own settings |
+| Agent code never sets addressing | Claude | Accept | The server returns 403 when an agent changes its own settings, and the default already admits the owner and the owner's agents |
