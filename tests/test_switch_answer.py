@@ -358,3 +358,14 @@ def test_multi_line_check_after_a_single_mention_is_still_one_command():
                                         "not_holding": [], "decisions": []}})
     Answerer(tools).respond(message("@premise check a.b = 72\nc.d = 1"))
     assert tools.calls[0] == ("check_change", {"changes": [{"fact": "a.b", "value": 72}, {"fact": "c.d", "value": 1}]})
+
+
+def test_blocked_pages_only_allowlisted_human_reviewers():
+    result = {"verdict": "BLOCKED", "graph_rev": 1, "reasons": [], "not_holding": [],
+              "decisions": [{"id": "ADR-012", "reviewers": ["p_jun", "p_anika"]}], "names": {"p_jun": "Jun Park"}}
+    tools = FakeTools({"check_change": result, "decision_lineage": None})
+    body = Answerer(tools, reviewer_handles="p_jun=jun.park").respond(message("check a.b = 72")).body
+    assert "Paging reviewers: @jun.park, p_anika" in body
+    clear = {**result, "verdict": "CLEAR_WITHIN_SCOPE", "decisions": [], "reasons": []}
+    body = Answerer(FakeTools({"check_change": clear}), reviewer_handles="p_jun=jun.park").respond(message("check a.b = 1")).body
+    assert "Paging" not in body

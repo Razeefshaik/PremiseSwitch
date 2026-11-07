@@ -9,6 +9,7 @@ import time
 from typing import Any, Callable
 
 from .contracts import InboundMessage, Reply, ToolBackend
+from .extras import reviewer_mentions
 from .format import HELP, UNAVAILABLE, escape, format_check, format_result
 from .router import ParseError, Route, parse
 
@@ -28,10 +29,13 @@ def content_terms(query: str) -> str:
 
 
 class Answerer:
-    def __init__(self, tools: ToolBackend, clock: Callable[[], float] = time.monotonic, *, clearance=None):
+    def __init__(self, tools: ToolBackend, clock: Callable[[], float] = time.monotonic, *, clearance=None,
+                 reviewer_handles: str | None = None):
         self.tools = tools
         self.clock = clock
         self.clearance = clearance
+        # "p_jun=jun.park,..." of verified human Mattermost usernames. Never agents.
+        self.reviewer_handles = reviewer_handles
         self._agent_replies: dict[tuple[str, str], deque[float]] = {}
         # Wiring uses to_thread: serialize admission and replies so concurrent calls
         # cannot overrun the per-room/thread budget.
@@ -85,6 +89,13 @@ class Answerer:
                 if lineage:
                     names.update(lineage.get("names", {}))
             body = escape(format_check(result, names))
+            # Page the people who can actually unblock this. Added after escaping, because
+            # reviewer_mentions has already escaped everything but the approved handles.
+            if self.reviewer_handles and body.split("\n", 1)[0] in {"BLOCKED", "NEEDS_REVIEW"}:
+                reviewers = [p for d in result.get("decisions", []) for p in d.get("reviewers", [])]
+                line = reviewer_mentions({p: names.get(p, p) for p in reviewers}, self.reviewer_handles)
+                if "@" in line:
+                    body += "\nPaging " + line[0].lower() + line[1:]
             # Sign only a CLEAR result the existing conservative formatter accepts.
             # Append after escaping so the opaque receipt is never modified.
             if self.clearance is not None and body.split("\n", 1)[0] == "CLEAR_WITHIN_SCOPE":
