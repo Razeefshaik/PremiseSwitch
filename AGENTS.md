@@ -11,7 +11,7 @@ Before starting, read:
 
 ## Project rules
 
-- **Stay in this repo.** Confirm `git remote get-url origin` ends in `premise-switch.git` before any git command. On Razeef's machine the folders above this repo belong to a different repo.
+- **Stay in this repo.** Confirm `git remote get-url origin` ends in `Razeefshaik/PremiseSwitch.git` before any git command. On Razeef's machine the folders above this repo belong to a different repo.
 - **No language model in Premise's answers.** Deterministic tools only.
 - **An empty or failed result is never safety.** Never present "unchecked" as a pass.
 - **No secrets.** Never commit, print or log keys or tokens, or raw room text outside the v2 gateway.

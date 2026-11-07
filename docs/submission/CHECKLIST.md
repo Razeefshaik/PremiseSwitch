@@ -11,7 +11,7 @@
 
 ## Repo
 - [ ] Public, with no secrets in the history.
-- [ ] `git remote -v` in every clone shows only `premise-switch`.
+- [ ] `git remote -v` in every clone shows only `Razeefshaik/PremiseSwitch`.
 - [ ] The original `Razeefshaik/Premise` and its deployments untouched.
 - [ ] Room template committed.
 - [ ] About description and topics filled.
