@@ -29,3 +29,7 @@ One row per design change, with its reason. Add a dated section per batch of wor
 | Bound summaries to 1500 characters, preserving verdict, footer, and a whole verified fix alternative | C03 | Accept | Truncation must not erase the verdict or turn a partial remedy into pasteable advice |
 | Render only path:line citations and escape every graph-text mention with a zero-width space | C03 | Accept | Replies should cite local evidence without waking agents through echoed graph content |
 | Treat any untracked reason as unchecked even when a result claims clear | C03 | Accept | Mixed proposals cannot establish safety outside the tracked scope |
+| Enrich check reviewer ids via decision_lineage calls, falling back to ids for missing names | C03 | Accept | ToolBackend exposes no raw graph query or names registry; never invent people |
+| Serialize responder admission and cap all agent replies per room/thread at six per sliding ten minutes | C03 | Accept | to_thread calls can race; failures count too, and idle budgets expire |
+| Catch parser, tool, and formatter failures without logging text or exception details | C03 | Accept | Room input is untrusted and any failed assessment must remain explicitly unchecked |
+| Commit real kestrel regression tests without starting Docker on this Windows machine | C03 | Accept | Docker engine is unavailable; the card permits server review of unrun graph tests |

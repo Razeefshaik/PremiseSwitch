@@ -15,7 +15,7 @@ HELP = ("Commands: help; check fact.key = value (commas, and, or newlines); "
 
 
 def escape(text: Any) -> str:
-    return str(text).replace("@", "@\u200b")
+    return re.sub(r"@(?!\u200b)", "@\u200b", str(text))
 
 
 def _text(value: Any, limit: int = 200) -> str:
