@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from collections import deque
+from dataclasses import replace
 import re
 import threading
 import time
@@ -14,6 +15,7 @@ from .router import ParseError, Route, parse
 
 UNPARSED = ("Couldn't parse that command; this change is unchecked. Send only the command, for example: "
             "check paylane.retry_window_hours = 72\ndeterministic")
+MAX_COMMANDS = 5
 # Fulltext matches on these alone would answer unrelated questions with confident nonsense.
 STOPWORDS = frozenset("""a about all am an and any are as at be been but by can could did do does for from had has
     have how i if in is it its me my of on or our please should so tell than that the their them then there these
@@ -112,6 +114,22 @@ class Answerer:
         return True
 
     def respond(self, message: InboundMessage) -> Reply | None:
+        """Answer each `@premise` line of a message separately: people often stack commands."""
+        if not message.addressed:
+            return None
+        parts = [p.strip() for p in re.split(r"(?im)^[ \t]*@premise\b", message.body) if p.strip()]
+        if len(parts) < 2:
+            return self._respond_one(message)
+        if len(parts) > MAX_COMMANDS:
+            parts = parts[:MAX_COMMANDS]
+        replies = [r for r in (self._respond_one(replace(message, body=p)) for p in parts) if r is not None]
+        if not replies:
+            return None
+        # Each section is already escaped. The quoted command shows which answer is which.
+        body = "\n\n".join(f"> {escape(p.splitlines()[0][:120])}\n{r.body}" for p, r in zip(parts, replies))
+        return Reply(body, replies[0].thread_id, replies[0].mention)
+
+    def _respond_one(self, message: InboundMessage) -> Reply | None:
         """Never propagate tool/parser/formatter failures or echo exception details."""
         thread_id = None
         mention = ()

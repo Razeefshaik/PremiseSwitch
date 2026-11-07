@@ -343,3 +343,18 @@ def test_clear_with_no_decisions_has_no_reviewer_warning():
     result = {"verdict": "CLEAR_WITHIN_SCOPE", "graph_rev": 1, "reasons": [], "not_holding": [], "decisions": []}
     body = Answerer(FakeTools({"check_change": result})).respond(message("check a.b = 1")).body
     assert body.startswith("CLEAR_WITHIN_SCOPE") and "reviewer" not in body.lower()
+
+
+def test_stacked_commands_in_one_message_are_answered_one_by_one():
+    result = {"verdict": "BLOCKED", "graph_rev": 1, "reasons": [], "not_holding": [], "decisions": []}
+    tools = FakeTools({"check_change": result})
+    reply = Answerer(tools).respond(message("@premise help\n@premise check a.b = 72"))
+    assert "Commands:" in reply.body and "BLOCKED" in reply.body and "Couldn't parse" not in reply.body
+    assert reply.body.index("Commands:") < reply.body.index("BLOCKED")
+
+
+def test_multi_line_check_after_a_single_mention_is_still_one_command():
+    tools = FakeTools({"check_change": {"verdict": "BLOCKED", "graph_rev": 1, "reasons": [],
+                                        "not_holding": [], "decisions": []}})
+    Answerer(tools).respond(message("@premise check a.b = 72\nc.d = 1"))
+    assert tools.calls[0] == ("check_change", {"changes": [{"fact": "a.b", "value": 72}, {"fact": "c.d", "value": 1}]})
