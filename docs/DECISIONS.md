@@ -25,3 +25,9 @@ One row per design change, with its reason. Add a dated section per batch of wor
 
 - E2 marks every claim in a message as `instruction` when its full body matches `INSTRUCTION`; three failing regression cases reproduced the cross-sentence gap before the fix.
 - Switch messages use the existing chat gateway and account mappings; reconciliation and challenges already handle chat roots/replies generically, so their source-specific Jira logic needs no change.
+- A single listener owns an append-only, fsynced JSONL journal in `SWITCH_STATE_DIR` (default `.runtime/switch`); gateway redaction precedes writes, message IDs deduplicate across restarts, and agents are discarded before storage.
+- Per-room workers checkpoint append positions rather than timestamps, so late or simultaneous messages survive; every `list_keys()` reads the complete room journal to prevent false tombstones.
+- Graphs, stream, and the decision-load marker use `premise_switch_v2_` plus a stable hash of state/model paths; decision ingest runs once per database initialization, including across listener restarts, without touching the demo graph.
+- Listener runs use `llm_provider="none"`, `github=None`, and no output directory; failed/incomplete processing raises instead of looking like an empty successful run, and no PR is opened.
+- Notices contain only the receiving room's supporting quotes, required drift/support/contest/origin/injection/verdict fields, neutralized mentions, and fewer than 800 characters; durable `(room_id, drift_key)` entries prevent repeat notices while allowing a new supporting room to receive one.
+- Notice deduplication is recorded before returning to the caller; the frozen Listener contract has no post acknowledgement, so crash-safe delivery retries belong to future wiring work rather than claiming guaranteed delivery here.
