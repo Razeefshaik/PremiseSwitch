@@ -87,6 +87,6 @@ Python, FalkorDB, Switch agent protocol, HTTP and WebSockets, Mattermost bridge,
 
 Repo: https://github.com/Razeefshaik/PremiseSwitch
 
-Video: ‹VIDEO LINK›
+Video: https://youtu.be/h4dNmmn163g
 
 Blog: ‹BLOG LINK›

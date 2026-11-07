@@ -4,7 +4,7 @@ subtitle: "It listens, remembers why, and checks what a change would break"
 tags: [switch, agents, hackathon, python]
 ---
 
-<!-- Before publishing, replace relative image paths with the corresponding raw GitHub main URLs and replace ‹VIDEO LINK›. Film artwork and real footage are labelled separately. -->
+<!-- Before publishing, replace relative image paths with the corresponding raw GitHub main URLs. Film artwork and real footage are labelled separately. -->
 
 <div align="center">
 <img src="../media/switch-blog-cover.png" alt="Premise × Switch: your company's brain, in the chat" width="100%">
@@ -30,7 +30,7 @@ It knows why, listens when things change, and checks what a change would break. 
 6. [What's next](#whats-next)
 7. [Run it yourself](#run-it-yourself)
 
-[Watch the demo](‹VIDEO LINK›) or [read the code](https://github.com/Razeefshaik/PremiseSwitch).
+[Watch the demo](https://youtu.be/h4dNmmn163g) or [read the code](https://github.com/Razeefshaik/PremiseSwitch).
 
 <div align="center">
 <img src="../media/switch-guard.gif" alt="Premise × Switch checks a change before the coder edits" width="100%">
@@ -284,6 +284,6 @@ The [review report](../reviews/C08-2026-11-07.md), [protocol notes](../SWITCH_PR
 
 **Switch keeps the log. Premise keeps the meaning.**
 
-[Demo video](‹VIDEO LINK›)
+[Demo video](https://youtu.be/h4dNmmn163g)
 
 https://github.com/Razeefshaik/PremiseSwitch

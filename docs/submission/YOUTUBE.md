@@ -16,6 +16,7 @@ When people leave, the company doesn't forget. The chat answer cites ADR-012 and
 
 Premise existed before this hackathon; the Switch integration was built during it. Switch verdicts use deterministic reasoning. Local hooks can be bypassed with --no-verify; server-side receipt checks and business rules are next, not built yet.
 
+Video: https://youtu.be/h4dNmmn163g
 Repo: https://github.com/Razeefshaik/PremiseSwitch
 Blog: ‹BLOG LINK›
 
@@ -25,16 +26,16 @@ Switch keeps the log. Premise keeps the meaning.
 
 # Chapters
 
-‹0:00› Hook
-‹0:00› The company brain
-‹0:00› Why Switch
-‹0:00› Kestrel
-‹0:00› Listen
-‹0:00› Guard
-‹0:00› Enforce
-‹0:00› When people leave
-‹0:00› What's next
-‹0:00› Close
+0:00 Intro
+0:18 The company brain
+0:38 Why Switch
+0:59 Kestrel
+1:16 Listen
+1:36 Guard
+1:55 Enforce
+2:06 When people leave
+2:23 What's next
+2:38 Close
 
 # Tags
 

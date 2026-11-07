@@ -2,7 +2,7 @@
 
 <h1>Premise × Switch</h1>
 
-<a href="‹VIDEO LINK›"><img src="docs/media/switch-banner.png" alt="Premise × Switch: your company's brain, in the chat" width="100%"></a>
+<a href="https://youtu.be/h4dNmmn163g"><img src="docs/media/switch-banner.png" alt="Premise × Switch: your company's brain, in the chat" width="100%"></a>
 
 ### Switch keeps the log. Premise keeps the meaning.
 
@@ -21,7 +21,7 @@ It knows why, listens when things change, and checks what a change would break.
 ![Unknown stays unchecked](https://img.shields.io/badge/unknown-unchecked-ffb900?style=flat&labelColor=555555)
 
 <p>
-  <a href="‹VIDEO LINK›"><img src="https://img.shields.io/badge/Watch_the_demo-Under_3_minutes-ff0000?style=for-the-badge&labelColor=555555&logo=youtube&logoColor=white" alt="Watch the demo, under 3 minutes"></a>
+  <a href="https://youtu.be/h4dNmmn163g"><img src="https://img.shields.io/badge/Watch_the_demo-Under_3_minutes-ff0000?style=for-the-badge&labelColor=555555&logo=youtube&logoColor=white" alt="Watch the demo, under 3 minutes"></a>
   <a href="#the-switch-workflow"><img src="https://img.shields.io/badge/How_it_uses-Switch-2457e6?style=for-the-badge&labelColor=555555&logoColor=white" alt="The Premise × Switch workflow"></a>
   <a href="#run-it-yourself"><img src="https://img.shields.io/badge/Run_it-Your_own_Switch-1e90ff?style=for-the-badge&labelColor=555555&logo=docker&logoColor=white" alt="Run it yourself"></a>
   <a href="docs/blog/premise-switch.md"><img src="https://img.shields.io/badge/Read-The_build_story-ffb900?style=for-the-badge&labelColor=555555&logo=devdotto&logoColor=white" alt="The build story"></a>
@@ -291,7 +291,7 @@ sequenceDiagram
 | **Use of Switch** (30%) | A custom agent over the agent protocol: per-room WebSockets, threads, targeted mentions, linked rooms, room documents, room join, a group template, the Mattermost bridge. Every move happens in a room | [How it uses Switch](#the-switch-workflow), [`premise_switch/client.py`](premise_switch/client.py), [protocol notes](docs/SWITCH_PROTOCOL.md) |
 | **Technical execution** (25%) | 671 tests pass, 286 of them for the Switch integration, against a fake Switch server that speaks the WebSocket protocol and rejects undocumented arguments. The gold evaluation has **0 gold floor failures**. An adversarial review found 9 issues; 8 are fixed with regression tests. The setup below was followed literally in a fresh clone | [Testing](#testing), [review](docs/reviews/C08-2026-11-07.md), [`doctor`](premise_switch/doctor.py) |
 | **Creativity and impact** (25%) | Context that stops at the room's edge, carried across rooms. Agents stopped *before* they break a guarantee, with the owner paged. Verdicts become receipts that git enforces | [The story](#see-it-at-kestrel), [Enforce](#enforce) |
-| **Presentation** (20%) | The demo video shows each Switch feature at work, and this README maps every feature to its code | [Demo video](‹VIDEO LINK›), [build story](docs/blog/premise-switch.md), [walkthrough](docs/WALKTHROUGH.md) |
+| **Presentation** (20%) | The demo video shows each Switch feature at work, and this README maps every feature to its code | [Demo video](https://youtu.be/h4dNmmn163g), [build story](docs/blog/premise-switch.md), [walkthrough](docs/WALKTHROUGH.md) |
 
 ### Built during the hackathon
 
