@@ -1,0 +1,28 @@
+version: 1
+params:
+  bridge:
+    type: bridge
+    default: [$first]
+  coder:
+    type: agent
+    description: The coding agent's name
+group:
+  name: Kestrel
+rooms:
+  - name: payments
+    bridge: "{bridge}"
+    agents: [premise]
+    users: ["{$creator}"]
+    instructions: Decisions about Kestrel payments are discussed here. Premise listens.
+  - name: kestrel-dev
+    bridge: "{bridge}"
+    agents: [premise, "{coder}"]
+    users: ["{$creator}"]
+    instructions: >-
+      Kestrel payments platform. Before editing any file under config/, ask @premise
+      to check the change and follow its verdict, for example: @premise check
+      paylane.retry_window_hours = 72. Never merge; a human approves.
+links:
+  - from: kestrel-dev
+    to: payments
+    label: payments decisions
