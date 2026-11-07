@@ -136,6 +136,8 @@ class FactClaimExtractor:
 
     def extract(self, env: Envelope, person: str) -> tuple[list[Claim], list[dict]]:
         body = body_of(env)
+        # An instruction in a separate sentence still taints the entire source.
+        instruction = bool(INSTRUCTION.search(body))
         claims, skipped = [], []
         for sm in SENTENCE.finditer(body):
             sentence = sm.group(0).strip()
@@ -163,7 +165,7 @@ class FactClaimExtractor:
                 cid = hashlib.sha256(f"{env.entity_key}|{env.sequence}|{fact}|{s_start + nm.start()}".encode()).hexdigest()[:20]
                 claims.append(Claim(
                     id=cid, fact=fact, value=value, unit=self.ext.units[fact], raw=nm.group(0).strip(),
-                    previous=previous, status=status_of(sentence),
+                    previous=previous, status="instruction" if instruction else status_of(sentence),
                     supersedes=bool(SUPERSESSION.search(sentence) or from_to), quote=sentence,
                     start=s_start, end=s_start + len(sentence), envelope_key=env.entity_key, sequence=env.sequence,
                     as_of_ms=int(env.time.timestamp() * 1000), person=person))

@@ -28,7 +28,7 @@ class EntityCatalog:
                                            "aliases": [partner["id"], partner["name"], *(partner.get("aliases") or [])]}
         for person, ids in ext.identities.items():
             if person in self.entities:
-                for source in ("slack", "jira", "github", "pages"):
+                for source in ("slack", "jira", "github", "pages", "switch"):
                     values = ids.get(source) or []
                     for native in values if isinstance(values, list) else [values]:
                         self.entities[person]["aliases"] += [str(native), f"{source}:{native}"]

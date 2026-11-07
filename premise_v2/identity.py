@@ -42,7 +42,7 @@ class IdentityDirectory:
         for person, ids in ext.identities.items():
             if person not in people:
                 raise ValueError(f"identity mapping references unknown person {person}")
-            for source in ("slack", "jira", "github", "pages"):
+            for source in ("slack", "jira", "github", "pages", "switch"):
                 values = ids.get(source) or []
                 for native in values if isinstance(values, list) else [values]:
                     key = f"{source}:{native}"

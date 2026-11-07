@@ -26,6 +26,7 @@ SECRET_PATTERNS = [
 
 CLASS_RULES = {
     ("slack", "message"): "chat",
+    ("switch", "message"): "chat",
     ("jira", "ticket"): "ticket",
     ("jira", "comment"): "ticket_comment",
     ("github", "issue"): "ticket",

@@ -62,3 +62,18 @@ One row per design change, with its reason. Add a dated section per batch of wor
 | Validate every documented op argument and reject undocumented required arguments | C05 | Accept | A renamed optional argument or new required argument breaks adapter calls across server versions |
 | Missing credentials warn and skip authenticated reads; empty registration key passes with state present | C05 | Accept | Registration is an owner action and the one-use key is removed after registration |
 | Read-only list_rooms uses the bare arguments POST; canonical guard uses in-process GraphTools | C05 | Accept | Discover rooms without connecting or changing server state, and never treat graph errors as safety |
+## 2026-11-07 C04 listen
+
+- E2 marks every claim in a message as `instruction` when its full body matches `INSTRUCTION`; three failing regression cases reproduced the cross-sentence gap before the fix.
+- Switch messages use the existing chat gateway and account mappings; reconciliation and challenges already handle chat roots/replies generically, so their source-specific Jira logic needs no change.
+- A single listener owns an append-only, fsynced JSONL journal in `SWITCH_STATE_DIR` (default `.runtime/switch`); gateway redaction precedes writes, message IDs deduplicate across restarts, and agents are discarded before storage.
+- Per-room workers checkpoint append positions rather than timestamps, so late or simultaneous messages survive; every `list_keys()` reads the complete room journal to prevent false tombstones.
+- Graphs, stream, and the decision-load marker use `premise_switch_v2_` plus a stable hash of state/model paths; decision ingest runs once per database initialization, including across listener restarts, without touching the demo graph.
+- Listener runs use `llm_provider="none"`, `github=None`, and no output directory; failed/incomplete processing raises instead of looking like an empty successful run, and no PR is opened.
+- Notices contain only the receiving room's supporting quotes, required drift/support/contest/origin/injection/verdict fields, neutralized mentions, and fewer than 800 characters; durable `(room_id, drift_key)` entries prevent repeat notices while allowing a new supporting room to receive one.
+- Notice deduplication is recorded before returning to the caller; the frozen Listener contract has no post acknowledgement, so crash-safe delivery retries belong to future wiring work rather than claiming guaranteed delivery here.
+- Listener validation from the S: clone through `FALKORDB_PORT=6381`: `15 passed in 385.38s`; the demo-shaped injection case produces 24 -> 72, two independent origins, one ignored injection, and verdict preview `BLOCKED`.
+- Measured tunnel `run_once()` times are 41.441 s for initial ingest, 20.805 s for a rerun, and 20.807 s after restart; VM-local latency remains unmeasured and must be checked before choosing the live debounce interval.
+- Two people sharing a thread produce one origin (`observed`) and no notice; independent demo evidence needs separate top-level messages, as the existing reconciliation rule intends.
+- Reviewed identity rows use `links: [{account: "switch:<payload.sender>", person: p_anika, status: confirmed}]`; the account is global to the sender and the person must already exist in the model, so no sandbox edit or display-name guess is needed here.
+- Compatibility validation from the same S: clone through port 6381: `python -m pytest -q tests/test_v2_pipeline.py tests/test_v2_identity.py` reports `43 passed in 905.11s`; the full suite and `premise-v2 eval --gold` are deferred to Claude's VM review as the card addendum requires, and no gold data was changed.
