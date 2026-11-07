@@ -1,12 +1,21 @@
 """Offline checks for the C07 optional Switch helpers."""
 import asyncio
+from datetime import datetime, timezone
+import json
+from pathlib import Path
+import subprocess
+import sys
 
+import httpx
 import pytest
 
 from premise_switch.extras import DecisionLedger, LEDGER_MAX_BYTES, LEDGER_NAME
 from premise_switch.extras import intro_message, related_rooms_line, reviewer_mentions, room_join_intro
 from premise_switch.contracts import LinkedRoom
 from switch_fakes import FakeGateway
+from demo import seed_payments as seed
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 class DocumentGateway(FakeGateway):
@@ -128,3 +137,85 @@ async def test_related_rooms_members_only_and_failures(caplog):
     gateway.linked_rooms = fail
     assert await related_rooms_line(gateway, "dev") == ""
     assert "ValueError" in caplog.text and "secret-token" not in caplog.text
+
+
+def test_seed_cli_dry_run_never_constructs_http_client(monkeypatch, capsys):
+    def forbidden(*args, **kwargs):
+        pytest.fail("dry-run attempted network access")
+    monkeypatch.setattr(httpx, "Client", forbidden)
+    monkeypatch.setenv("MM_TOKEN_1", "secret-token-one")
+    monkeypatch.setenv("MM_TOKEN_2", "secret-token-two")
+    assert seed.main(["--dry-run"]) == 0
+    output = capsys.readouterr().out
+    for _, message in seed.MESSAGES:
+        assert message in output
+    assert "secret-token" not in output
+    result = subprocess.run([sys.executable, "demo/seed_payments.py", "--dry-run"],
+                            cwd=ROOT, capture_output=True, text=True, check=True)
+    assert "DRY RUN person 2" in result.stdout and "secret-token" not in result.stdout
+
+
+def test_seed_posts_top_level_messages_with_correct_tokens_and_delays(capsys):
+    calls, pauses = [], []
+    env = {"MM_URL": "http://mattermost.test/", "MM_CHANNEL_ID": "payments-id",
+           "MM_TOKEN_1": "secret-token-one", "MM_TOKEN_2": "secret-token-two"}
+
+    def handle(request):
+        calls.append(request)
+        return httpx.Response(201, json={"id": "post-id"})
+    with httpx.Client(transport=httpx.MockTransport(handle)) as client:
+        assert seed.seed_payments(environ=env, http_client=client, sleep=pauses.append) == 3
+    assert pauses == [3, 3]
+    for request, (person, message) in zip(calls, seed.MESSAGES, strict=True):
+        assert request.method == "POST" and str(request.url) == "http://mattermost.test/api/v4/posts"
+        assert request.headers["Authorization"] == "Bearer " + env[f"MM_TOKEN_{person}"]
+        assert json.loads(request.content) == {"channel_id": "payments-id", "message": message}
+        assert "root_id" not in json.loads(request.content)
+    assert "secret-token" not in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("mode", ["http", "transport"])
+def test_seed_failure_output_never_exposes_tokens(monkeypatch, capsys, mode):
+    def handle(request):
+        if mode == "transport":
+            raise httpx.ConnectError("secret-token-one secret-token-two", request=request)
+        return httpx.Response(403, text="secret-token-one secret-token-two")
+    env = {"MM_URL": "http://mattermost.test", "MM_CHANNEL_ID": "payments-id",
+           "MM_TOKEN_1": "secret-token-one", "MM_TOKEN_2": "secret-token-two"}
+    for name, value in env.items():
+        monkeypatch.setenv(name, value)
+    client_class = httpx.Client
+    monkeypatch.setattr(httpx, "Client", lambda **kwargs: client_class(transport=httpx.MockTransport(handle)))
+    assert seed.main([]) == 1
+    output = capsys.readouterr()
+    assert "Seed failed" in output.err and "secret-token" not in output.out + output.err
+
+
+def test_seed_missing_environment_does_not_post(monkeypatch, capsys):
+    for name in seed.NEEDED_NAMES:
+        monkeypatch.delenv(name, raising=False)
+    def forbidden(**kwargs):
+        pytest.fail("invalid environment constructed a client")
+    monkeypatch.setattr(httpx, "Client", forbidden)
+    assert seed.main([]) == 1
+    assert "ValueError" in capsys.readouterr().err
+
+
+def test_seed_sentences_extract_grounded_claims_with_bundled_aliases():
+    from premise_v2.envelope import Envelope
+    from premise_v2.extract import FactClaimExtractor, ground
+    from premise_v2.registry import Ext
+
+    ext = Ext.load(ROOT / "sandbox/kestrel-platform")
+    extractor = FactClaimExtractor(ext)
+    for n, (person, text) in enumerate(seed.MESSAGES):
+        env = Envelope(entity_key=f"switch:demo-{n}", source="switch", native_id=f"demo-{n}",
+                       sequence=n, kind="message", text=text, time=datetime.now(timezone.utc))
+        claims, skipped = extractor.extract(env, f"demo-person-{person}")
+        assert not skipped and len(claims) == 1
+        claim = claims[0]
+        assert claim.fact == "paylane.retry_window_hours"
+        assert claim.value == (72 if n < 2 else 999)
+        assert claim.status == ("asserted" if n < 2 else "instruction")
+        if n < 2:
+            assert ground(claim, text, ext)[0] is True
