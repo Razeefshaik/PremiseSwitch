@@ -4,9 +4,14 @@ from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
+import shutil
 import stat
+import subprocess
+import sys
+import time
 
 import pytest
+import yaml
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from premise_switch.clearance import Clearance, DELETED, canonical, load_or_create_key, public_key_pem, verify
@@ -68,7 +73,7 @@ def test_only_clear_can_issue(issuer, verdict):
 
 
 @pytest.mark.parametrize("change", [
-    {"changed": [{"fact": "missing.fact", "new": 72}]}, {"changed": []},
+    {"changed": [{"fact": "missing.fact", "new": 72}]},
     {"not_holding": [{"id": "G_BROKEN"}]}, {"reasons": [{"code": "R_UNTRACKED"}]},
     {"graph_rev": True}, {"guarantees": [{"status": "unknown"}]}, {"reasons": None},
 ])
@@ -108,3 +113,171 @@ def test_deletion_is_distinct_from_yaml_null(issuer):
     deletion = [{**CHANGES[0], "value": DELETED}]
     assert verify(token, issuer.public_key_pem(), deletion, NOW).ok
     assert not verify(token, issuer.public_key_pem(), [{**CHANGES[0], "value": None}], NOW)
+
+
+@pytest.fixture
+def git_repo(tmp_path, issuer):
+    root = tmp_path / "repo"
+    root.mkdir()
+    environment = {**os.environ, "PATH": str(Path(sys.executable).parent) + os.pathsep + os.environ["PATH"],
+                   "PYTHONPATH": "", "PYTHONUTF8": "1", "PYTHONDONTWRITEBYTECODE": "1",
+                   "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": os.devnull, "GIT_TERMINAL_PROMPT": "0"}
+
+    class Repo:
+        def run(self, *args, check=True):
+            result = subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True,
+                                    encoding="utf-8", env=environment, timeout=30)
+            if check and result.returncode:
+                pytest.fail("temporary Git operation failed: " + result.stderr)
+            return result
+
+        def write(self, relative, text):
+            path = root / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+
+        def stage_fix(self):
+            self.write("config/partners/paylane.yaml", "retry:\n  window_hours: 72\ndelivery:\n  timeout_ms: 5000\n")
+            self.write("config/webhookingress.yaml", "dedupe:\n  ttl_hours: 72\n")
+            self.write("config/platform/redis.yaml", "limits:\n  max_ttl_hours: 72\n")
+            self.run("add", "--", "config/")
+
+        def commit(self, token=None, *, body=None):
+            text = body or "apply config change"
+            if token is not None:
+                text += "\n\nPremise-Clearance: " + token + "\n"
+            path = tmp_path / "commit-message"
+            path.write_text(text, encoding="utf-8")
+            return self.run("commit", "-q", "-F", str(path), check=False)
+
+    repo = Repo()
+    repo.root = root
+    repo.issuer = issuer
+    repo.run("init", "-q", "--initial-branch=main", "--template=")
+    for key, value in {"user.name": "Clearance test", "user.email": "clearance@example.invalid",
+                       "commit.gpgsign": "false", "core.autocrlf": "false", "core.hooksPath": ".git/hooks"}.items():
+        repo.run("config", key, value)
+    repo.write("config/partners/paylane.yaml", "retry:\n  window_hours: 24\ndelivery:\n  timeout_ms: 5000\n")
+    repo.write("config/webhookingress.yaml", "dedupe:\n  ttl_hours: 24\n")
+    repo.write("config/platform/redis.yaml", "limits:\n  max_ttl_hours: 24\n")
+    public = root / ".premise/clearance.pub"
+    public.parent.mkdir()
+    public.write_bytes(issuer.public_key_pem())
+    repo.run("add", ".")
+    repo.run("commit", "-q", "-m", "baseline")
+    hook = root / ".git/hooks/commit-msg"
+    hook.parent.mkdir(exist_ok=True)
+    shutil.copyfile(ROOT / "demo/hooks/commit-msg", hook)
+    hook.chmod(0o755)
+    return repo
+
+
+def live_receipt(issuer, result=None, *, age=0):
+    return receipt(issuer, result, now=int(time.time()) - age)
+
+
+def test_real_commit_accepts_correct_receipt_from_staged_index(git_repo):
+    git_repo.stage_fix()
+    # A worktree edit must not change the assessed/staged snapshot.
+    git_repo.write("config/partners/paylane.yaml", "retry:\n  window_hours: 96\n")
+    outcome = git_repo.commit(live_receipt(git_repo.issuer))
+    assert outcome.returncode == 0, outcome.stderr
+    assert "window_hours: 72" in git_repo.run("show", "HEAD:config/partners/paylane.yaml").stdout
+
+
+@pytest.mark.parametrize("case", [
+    "no_receipt", "another_key", "tampered", "expired", "extra_changed_key", "missing_changed_key",
+    "changed_value", "different_file", "malformed_yaml", "missing_public_key", "bad_public_key",
+    "extra_receipt_key", "missing_receipt_key", "duplicate_trailer", "duplicate_yaml_key", "dotted_yaml_key",
+])
+def test_real_commit_refuses_invalid_clearance(git_repo, case, capsys):
+    git_repo.stage_fix()
+    before = git_repo.run("rev-parse", "HEAD").stdout
+    token = live_receipt(git_repo.issuer)
+    if case == "no_receipt":
+        token = None
+    elif case == "another_key":
+        token = live_receipt(Clearance(Ed25519PrivateKey.generate(), facts_path=FACTS))
+    elif case == "tampered":
+        version, encoded, signature = token.split(".")
+        payload = json.loads(base64.urlsafe_b64decode(encoded + "==="))
+        payload["graph_rev"] += 1
+        token = f"{version}.{base64.urlsafe_b64encode(canonical(payload)).decode().rstrip('=')}.{signature}"
+    elif case == "expired":
+        token = live_receipt(git_repo.issuer, age=86401)
+    elif case == "extra_changed_key":
+        path = git_repo.root / "config/webhookingress.yaml"
+        path.write_text(path.read_text() + "unassessed: 1\n", encoding="utf-8")
+    elif case == "missing_changed_key":
+        git_repo.write("config/platform/redis.yaml", "limits:\n  max_ttl_hours: 24\n")
+    elif case == "changed_value":
+        git_repo.write("config/webhookingress.yaml", "dedupe:\n  ttl_hours: 96\n")
+    elif case == "different_file":
+        git_repo.run("mv", "config/partners/paylane.yaml", "config/partners/other.yaml")
+    elif case == "malformed_yaml":
+        git_repo.write("config/webhookingress.yaml", "dedupe: [unterminated")
+    elif case == "missing_public_key":
+        (git_repo.root / ".premise/clearance.pub").unlink()
+    elif case == "bad_public_key":
+        (git_repo.root / ".premise/clearance.pub").write_text("not a public key", encoding="utf-8")
+    elif case == "extra_receipt_key":
+        result = clear_result()
+        result["changed"].append({"fact": "paylane.delivery_timeout_ms", "new": 6000})
+        token = live_receipt(git_repo.issuer, result)
+    elif case == "missing_receipt_key":
+        result = clear_result()
+        result["changed"].pop()
+        token = live_receipt(git_repo.issuer, result)
+    elif case == "duplicate_yaml_key":
+        git_repo.write("config/webhookingress.yaml", "dedupe:\n  ttl_hours: 999\n  ttl_hours: 72\n")
+    elif case == "dotted_yaml_key":
+        git_repo.write("config/webhookingress.yaml", "dedupe.ttl_hours: 72\n")
+    git_repo.run("add", "--", "config/")
+    body = f"apply config\n\nPremise-Clearance: {token}\nPremise-Clearance: {token}\n" if case == "duplicate_trailer" else None
+    outcome = git_repo.commit(None if body else token, body=body)
+    assert outcome.returncode != 0
+    assert "Premise clearance refused:" in outcome.stderr and "Ask @premise to check these exact staged config changes" in outcome.stderr
+    assert git_repo.run("rev-parse", "HEAD").stdout == before
+    if case == "no_receipt":
+        print("Actual hook refusal:\n" + outcome.stderr.strip())
+
+
+def test_non_config_commit_needs_no_receipt_or_public_key(git_repo):
+    (git_repo.root / ".premise/clearance.pub").unlink()
+    git_repo.write("README.md", "Documentation only\n")
+    git_repo.run("add", "README.md")
+    outcome = git_repo.commit()
+    assert outcome.returncode == 0, outcome.stderr
+
+
+@pytest.mark.parametrize("entire_file", [False, True])
+def test_real_commit_supports_deleted_keys_and_files(git_repo, entire_file):
+    result = clear_result()
+    result["changed"] = [{"fact": "paylane.retry_window_hours", "new": None}]
+    if entire_file:
+        git_repo.run("rm", "config/partners/paylane.yaml")
+        result["changed"].append({"fact": "paylane.delivery_timeout_ms", "new": None})
+    else:
+        git_repo.write("config/partners/paylane.yaml", "delivery:\n  timeout_ms: 5000\n")
+        git_repo.run("add", "config/partners/paylane.yaml")
+    outcome = git_repo.commit(live_receipt(git_repo.issuer, result))
+    assert outcome.returncode == 0, outcome.stderr
+
+
+@pytest.mark.parametrize("value", [True, 1.0])
+def test_hook_preserves_scalar_types(git_repo, value):
+    result = clear_result()
+    result["changed"] = [{"fact": "paylane.retry_window_hours", "new": 1}]
+    git_repo.write("config/partners/paylane.yaml", yaml.safe_dump({"retry": {"window_hours": value}, "delivery": {"timeout_ms": 5000}}))
+    git_repo.run("add", "config/partners/paylane.yaml")
+    outcome = git_repo.commit(live_receipt(git_repo.issuer, result))
+    assert outcome.returncode != 0 and "changes do not match staged config" in outcome.stderr
+
+
+def test_semantically_unchanged_config_uses_an_empty_receipt(git_repo):
+    path = git_repo.root / "config/partners/paylane.yaml"
+    path.write_text("# formatting only\n" + path.read_text(), encoding="utf-8")
+    git_repo.run("add", "config/partners/paylane.yaml")
+    result = {**clear_result(), "changed": []}
+    outcome = git_repo.commit(live_receipt(git_repo.issuer, result))
+    assert outcome.returncode == 0, outcome.stderr

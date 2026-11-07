@@ -90,3 +90,7 @@ One row per design change, with its reason. Add a dated section per batch of wor
 - Resolve every changed fact through the server's `facts.yaml`; missing mappings, contradictory CLEAR results, duplicate targets and invalid values produce no receipt instead of guessing scope.
 - Represent deletion as `value: {"$delete": true}` to distinguish it from a staged YAML null; verification compares canonical JSON to preserve boolean/number/string distinctions.
 - Store the private key only in `SWITCH_STATE_DIR/clearance.key`, created exclusively and chmod 600; reuse existing Ed25519 keys without printing them or silently rotating malformed keys.
+- The standalone commit-msg hook uses only Python, cryptography and PyYAML; it reads YAML blobs from HEAD and the index with NUL-separated Git paths, so unstaged edits cannot change the assessed commit.
+- Reject malformed/ambiguous YAML, unsupported config files, non-regular files and incomplete receipts; compare typed JSON leaf values and explicit deletions, and require a signed empty change set for formatting-only config edits.
+- The hook and its public key are trusted local installation inputs: `--no-verify` bypasses a local hook, and a server-side check is the next step. This is local commit enforcement, not server-side or tamper-proof policy.
+- The hook carries a standalone copy of receipt verification; conformance tests issue real signatures and exercise real git commits to check parity without requiring Premise in the demo repository.

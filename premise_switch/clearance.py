@@ -121,7 +121,7 @@ class Clearance:
         try:
             if (type(result.get("graph_rev")) is not int or result["graph_rev"] < 0
                     or any(not isinstance(result.get(k), list) for k in ("reasons", "not_holding", "decisions", "changed"))
-                    or result["not_holding"] or not result["changed"]
+                    or result["not_holding"]
                     or any(g.get("status") != "holds" for g in result.get("guarantees", []))
                     or any(r.get("code") not in {"R_ALL_HOLD", "R_NO_TRACKED_FACTS"} for r in result["reasons"])
                     or not isinstance(room, str) or not room
