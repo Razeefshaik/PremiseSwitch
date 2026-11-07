@@ -3,7 +3,6 @@
 <h1>Premise × Switch</h1>
 
 <a href="‹VIDEO LINK›"><img src="docs/media/switch-banner.png" alt="Premise × Switch: your company's brain, in the chat" width="100%"></a>
-<br><sub>Light-theme Premise × Switch illustration; real Switch and Mattermost footage appears in the demos below.</sub>
 
 ### Switch keeps the log. Premise keeps the meaning.
 
