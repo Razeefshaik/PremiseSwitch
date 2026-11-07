@@ -26,3 +26,7 @@ One row per design change, with its reason. Add a dated section per batch of wor
 - Preserve top-level `agent_id` and `api_key` in atomic private state, extending it with room state; this reads the existing VM identity without re-registering.
 - Registration is explicit, stores credentials once, never overwrites and never changes addressing, following the live-server addendum.
 - Use uvicorn's websockets transport in the real local fake so tests need only the project's existing dependencies.
+- Keep one ordered worker per room separate from socket reads, and acknowledge completed dispatches; slow or failing callbacks cannot delay heartbeats or advance past queued messages.
+- Persist terminal room stops for takeover, closure and permanent refusal; polling and process restarts must not silently reclaim an intentionally stopped room.
+- Resolve senders from room participants by id then name, and treat unknown types as agents; unverified identity must not become human evidence.
+- Disable only the private websocket transport logger, since library DEBUG frames and headers expose room text and credentials.

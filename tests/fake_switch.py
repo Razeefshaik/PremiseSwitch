@@ -83,6 +83,7 @@ class FakeSwitch:
                 await ws.close(4401)
                 return
             query = dict(ws.query_params)
+            self.requests.append({"operation": "websocket", "arguments": query, "headers": dict(ws.headers)})
             self.connections.append(query)
             if self.refusal is not None:
                 await ws.send_json({"event": "refused", "data": {"status": self.refusal, "detail": "refused"}})
