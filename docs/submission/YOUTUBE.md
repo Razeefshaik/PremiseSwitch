@@ -18,7 +18,7 @@ Premise existed before this hackathon; the Switch integration was built during i
 
 Video: https://youtu.be/h4dNmmn163g
 Repo: https://github.com/Razeefshaik/PremiseSwitch
-Blog: ‹BLOG LINK›
+Blog: https://dev.to/razeef_shaik/premise-x-switch-your-companys-brain-in-the-chat-4imn
 
 Built for Flip the Switch by WeMakeDevs × Switch, Track 1
 

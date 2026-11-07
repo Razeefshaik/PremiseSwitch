@@ -89,4 +89,4 @@ Repo: https://github.com/Razeefshaik/PremiseSwitch
 
 Video: https://youtu.be/h4dNmmn163g
 
-Blog: ‹BLOG LINK›
+Blog: https://dev.to/razeef_shaik/premise-x-switch-your-companys-brain-in-the-chat-4imn

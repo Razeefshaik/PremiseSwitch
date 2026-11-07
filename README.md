@@ -24,7 +24,7 @@ It knows why, listens when things change, and checks what a change would break.
   <a href="https://youtu.be/h4dNmmn163g"><img src="https://img.shields.io/badge/Watch_the_demo-Under_3_minutes-ff0000?style=for-the-badge&labelColor=555555&logo=youtube&logoColor=white" alt="Watch the demo, under 3 minutes"></a>
   <a href="#the-switch-workflow"><img src="https://img.shields.io/badge/How_it_uses-Switch-2457e6?style=for-the-badge&labelColor=555555&logoColor=white" alt="The Premise × Switch workflow"></a>
   <a href="#run-it-yourself"><img src="https://img.shields.io/badge/Run_it-Your_own_Switch-1e90ff?style=for-the-badge&labelColor=555555&logo=docker&logoColor=white" alt="Run it yourself"></a>
-  <a href="docs/blog/premise-switch.md"><img src="https://img.shields.io/badge/Read-The_build_story-ffb900?style=for-the-badge&labelColor=555555&logo=devdotto&logoColor=white" alt="The build story"></a>
+  <a href="https://dev.to/razeef_shaik/premise-x-switch-your-companys-brain-in-the-chat-4imn"><img src="https://img.shields.io/badge/Read-The_build_story_on_DEV-ffb900?style=for-the-badge&labelColor=555555&logo=devdotto&logoColor=white" alt="The build story"></a>
 </p>
 
 <sub>Built for <b>Flip the Switch</b> by WeMakeDevs × Switch · Track 1: Best Business Workflow</sub>
@@ -291,7 +291,7 @@ sequenceDiagram
 | **Use of Switch** (30%) | A custom agent over the agent protocol: per-room WebSockets, threads, targeted mentions, linked rooms, room documents, room join, a group template, the Mattermost bridge. Every move happens in a room | [How it uses Switch](#the-switch-workflow), [`premise_switch/client.py`](premise_switch/client.py), [protocol notes](docs/SWITCH_PROTOCOL.md) |
 | **Technical execution** (25%) | 671 tests pass, 286 of them for the Switch integration, against a fake Switch server that speaks the WebSocket protocol and rejects undocumented arguments. The gold evaluation has **0 gold floor failures**. An adversarial review found 9 issues; 8 are fixed with regression tests. The setup below was followed literally in a fresh clone | [Testing](#testing), [review](docs/reviews/C08-2026-11-07.md), [`doctor`](premise_switch/doctor.py) |
 | **Creativity and impact** (25%) | Context that stops at the room's edge, carried across rooms. Agents stopped *before* they break a guarantee, with the owner paged. Verdicts become receipts that git enforces | [The story](#see-it-at-kestrel), [Enforce](#enforce) |
-| **Presentation** (20%) | The demo video shows each Switch feature at work, and this README maps every feature to its code | [Demo video](https://youtu.be/h4dNmmn163g), [build story](docs/blog/premise-switch.md), [walkthrough](docs/WALKTHROUGH.md) |
+| **Presentation** (20%) | The demo video shows each Switch feature at work, and this README maps every feature to its code | [Demo video](https://youtu.be/h4dNmmn163g), [build story on DEV](https://dev.to/razeef_shaik/premise-x-switch-your-companys-brain-in-the-chat-4imn), [walkthrough](docs/WALKTHROUGH.md) |
 
 ### Built during the hackathon
 
@@ -479,7 +479,7 @@ After the build, a separate review tried to break the finished code. It found ni
 - [`docs/WALKTHROUGH.md`](docs/WALKTHROUGH.md): the code, explained step by step.
 - [`docs/SWITCH_PROTOCOL.md`](docs/SWITCH_PROTOCOL.md): the Switch protocol as we found it on the live server.
 - [`docs/DECISIONS.md`](docs/DECISIONS.md): every design choice and its reason.
-- [`docs/blog/premise-switch.md`](docs/blog/premise-switch.md): the build story.
+- [`docs/blog/premise-switch.md`](docs/blog/premise-switch.md): the build story, also [published on DEV](https://dev.to/razeef_shaik/premise-x-switch-your-companys-brain-in-the-chat-4imn).
 - [`docs/PREMISE_ORIGINAL.md`](docs/PREMISE_ORIGINAL.md): the pre-hackathon feature reference.
 
 <div align="center">
