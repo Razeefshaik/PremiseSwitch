@@ -1,7 +1,7 @@
 {
   "stage": "before holdout capture",
   "files": {
-    "premise_v2/extract/__init__.py": "eca8be93c69f81661bb35a158ad94d386981e9820db673a7e2c4aea40e8c13b5",
+    "premise_v2/extract/__init__.py": "542f10f6d064b290911d7f23312a4dee79b9ed2df9d1effe4c1da5a58dc3410b",
     "premise_v2/extract/base.py": "dfecdd4948d8d7d40fc5e4ed4c9eb48fe6e1ad36852488e90dbb185150faa614",
     "premise_v2/extract/attestation.py": "f22a9095783e6e6c2319c22db50bcbccbb8c7141f4d2ae1c3cd67d2ea971baa6",
     "premise_v2/extract/knowledge.py": "4eac2c1e151334d3c8bb48c39be737686d98a471bbf34de6e789bae63207a162",
