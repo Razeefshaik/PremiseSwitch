@@ -6,6 +6,8 @@ from dataclasses import replace
 import logging
 import re
 
+from premise_v2.gateway import redact
+
 from .contracts import InboundMessage, Listener, Reply, Responder, RoomGateway
 from .extras import DecisionLedger, related_rooms_line
 
@@ -35,6 +37,7 @@ class Adapter:
         self._ledger: DecisionLedger | None = None
         # Each document write posts a notice in the room, so rows are written in batches.
         self.ledger_flush_seconds = ledger_flush_seconds
+        self.retry_seconds = 2.0
         self._flushes: dict[str, asyncio.Task] = {}
         self.debounce_seconds = debounce_seconds
         self._debounce: asyncio.Task | None = None
@@ -68,16 +71,28 @@ class Adapter:
             related = await related_rooms_line(self.gateway, message.room_id)
             if related:
                 reply = replace(reply, body=reply.body + "\n" + related)
-        try:
-            await self.gateway.post(message.room_id, reply)
-        except Exception as exc:
-            status = getattr(getattr(exc, "response", None), "status_code", "")
-            log.error("post failed in room %s: %s %s", message.room_id, type(exc).__name__, status)
+        if not await self._post(message.room_id, reply):
             return
         if found:
-            command = re.sub(r"(?i)@premise\b", "", message.body).strip()[:300]
+            # Redacted like everything else that is kept: a command can carry a secret.
+            command = redact(re.sub(r"(?i)@premise\b", "", message.body).strip()[:300])[0]
             await self._record(message.room_id, "verdict", {
                 "verdict": ", ".join(found), "changes": command, "thread_id": reply.thread_id})
+
+    async def _post(self, room_id: str, reply: Reply) -> bool:
+        """Post, retrying once after a transient failure. 400, 403 and 422 are final: the
+        request itself was refused, for example by Switch Trust."""
+        for attempt in (1, 2):
+            try:
+                await self.gateway.post(room_id, reply)
+                return True
+            except Exception as exc:
+                status = getattr(getattr(exc, "response", None), "status_code", None)
+                log.error("post failed in room %s: %s %s", room_id, type(exc).__name__, status or "")
+                if attempt == 2 or status in {400, 403, 422}:
+                    return False
+                await asyncio.sleep(self.retry_seconds)
+        return False
 
     async def _record(self, room_id: str, kind: str, summary: dict) -> None:
         """The ledger is a convenience. DecisionLedger.record never raises."""
@@ -122,10 +137,7 @@ class Adapter:
                 log.error("listen run failed: %s", type(exc).__name__)
                 return
             for notice in notices:
-                try:
-                    await self.gateway.post(notice.room_id, Reply(notice.body))
-                except Exception as exc:
-                    log.error("proposal post failed in room %s: %s", notice.room_id, type(exc).__name__)
+                if not await self._post(notice.room_id, Reply(notice.body)):
                     continue
                 await self._record(notice.room_id, "proposal", {
                     "summary": notice.body.splitlines()[0], "changes": notice.drift_key, "thread_id": None})

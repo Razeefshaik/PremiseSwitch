@@ -232,3 +232,50 @@ def test_ledger_writes_are_batched_into_one_document_update():
         return gw
     gw = run(go())
     assert Counting.writes == 1 and gw.documents[("room-1", "Premise decision ledger")].count("BLOCKED") == 3
+
+
+class Flaky(FakeGateway):
+    def __init__(self, failures, status):
+        super().__init__()
+        self.failures, self.status, self.attempts = failures, status, 0
+
+    async def post(self, room_id, reply):
+        import httpx
+        self.attempts += 1
+        if self.attempts <= self.failures:
+            request = httpx.Request("POST", "http://switch/ops/post_message")
+            raise httpx.HTTPStatusError("x", request=request, response=httpx.Response(self.status, request=request))
+        return await super().post(room_id, reply)
+
+
+def test_transient_post_failure_is_retried_once():
+    async def go():
+        gw = Flaky(1, 409)
+        a = Adapter(Echo(), gateway=gw)
+        a.retry_seconds = 0
+        await a.on_message(message("q"))
+        return gw
+    gw = run(go())
+    assert gw.attempts == 2 and len(gw.posts) == 1
+
+
+def test_refused_post_is_not_retried():
+    async def go():
+        gw = Flaky(5, 422)
+        a = Adapter(Echo(), gateway=gw)
+        a.retry_seconds = 0
+        await a.on_message(message("q"))
+        return gw
+    gw = run(go())
+    assert gw.attempts == 1 and gw.posts == []
+
+
+def test_ledger_never_keeps_a_secret_from_a_command():
+    async def go():
+        gw = FakeGateway()
+        a = Adapter(Verdict("NEEDS_REVIEW"), gateway=gw, ledger=True, ledger_flush_seconds=0)
+        await a.on_message(message("@premise check service.password = 'synthetic-password-123'"))
+        await asyncio.sleep(0.05)
+        return gw
+    ledger = run(go()).documents[("room-1", "Premise decision ledger")]
+    assert "NEEDS_REVIEW" in ledger and "synthetic-password-123" not in ledger
