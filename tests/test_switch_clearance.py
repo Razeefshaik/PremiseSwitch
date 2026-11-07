@@ -281,3 +281,93 @@ def test_semantically_unchanged_config_uses_an_empty_receipt(git_repo):
     result = {**clear_result(), "changed": []}
     outcome = git_repo.commit(live_receipt(git_repo.issuer, result))
     assert outcome.returncode == 0, outcome.stderr
+
+
+@pytest.mark.parametrize("verdict", ["CLEAR_WITHIN_SCOPE", "BLOCKED", "NEEDS_REVIEW", "ERROR"])
+def test_answerer_only_appends_receipt_on_clear(issuer, verdict):
+    from premise_switch.answer import Answerer
+    from switch_fakes import FakeTools, message
+
+    calls = []
+
+    class Counted:
+        def issue(self, result, **context):
+            calls.append(context)
+            return issuer.issue(result, **context)
+
+    result = {**clear_result(), "verdict": verdict}
+    reply = Answerer(FakeTools({"check_change": result}), clock=lambda: 0, clearance=Counted()).respond(
+        message("check paylane.retry_window_hours = 72", thread_id="thread-1"))
+    assert ("Premise-Clearance: " in reply.body) == (verdict == "CLEAR_WITHIN_SCOPE")
+    assert len(calls) == (1 if verdict == "CLEAR_WITHIN_SCOPE" else 0)
+    if calls:
+        token = reply.body.split("Premise-Clearance: ")[1]
+        checked = verify(token, issuer.public_key_pem(), CHANGES, time.time())
+        assert checked.ok and checked.payload["thread"] == "thread-1"
+        assert checked.payload["room"] == "room-1" and checked.payload["issued_at"] > 1_000_000
+
+
+def test_answerer_receipt_is_verbatim_after_escaping(issuer):
+    from premise_switch.answer import Answerer
+    from switch_fakes import FakeTools, message
+
+    result = {**clear_result(), "sources": [{"path": "notes/@coder.md", "line": 1}]}
+    reply = Answerer(FakeTools({"check_change": result}), clearance=issuer).respond(
+        message("check paylane.retry_window_hours = 72", room_id="room@name", thread_id="thread@name"))
+    body, token = reply.body.rsplit("\nPremise-Clearance: ", 1)
+    assert "@\u200bcoder" in body and "@coder" not in body and "@" not in token
+    checked = verify(token, issuer.public_key_pem(), CHANGES, time.time())
+    assert checked.ok and checked.payload["room"] == "room@name" and checked.payload["thread"] == "thread@name"
+
+
+@pytest.mark.parametrize("change", [
+    {"not_holding": [{"id": "G_BROKEN"}]}, {"reasons": [{"code": "R_UNTRACKED"}]},
+    {"changed": [{"fact": "no.mapping", "new": 72}]}, {"graph_rev": None},
+])
+def test_unavailable_untracked_and_unmapped_results_never_get_receipts(issuer, change):
+    from premise_switch.answer import Answerer
+    from switch_fakes import FakeTools, message
+
+    reply = Answerer(FakeTools({"check_change": {**clear_result(), **change}}), clearance=issuer).respond(
+        message("check paylane.retry_window_hours = 72"))
+    assert "Premise-Clearance:" not in reply.body
+
+
+@pytest.mark.parametrize("bad", ["pc1.abc.def@coder", "pc1.abc.def\n@coder", "not a receipt", RuntimeError("private details")])
+def test_bad_signers_fail_unavailable_without_mentions_or_details(bad):
+    from premise_switch.answer import Answerer
+    from premise_switch.format import UNAVAILABLE
+    from switch_fakes import FakeTools, message
+
+    class Broken:
+        def issue(self, *args, **kwargs):
+            if isinstance(bad, Exception):
+                raise bad
+            return bad
+
+    reply = Answerer(FakeTools({"check_change": clear_result()}), clearance=Broken()).respond(
+        message("check paylane.retry_window_hours = 72"))
+    assert reply.body == UNAVAILABLE
+
+
+def test_answerer_receipt_passes_the_real_commit_hook(git_repo):
+    from premise_switch.answer import Answerer
+    from switch_fakes import FakeTools, message
+
+    git_repo.stage_fix()
+    tools = FakeTools({"check_change": clear_result()})
+    reply = Answerer(tools, clearance=git_repo.issuer).respond(message(
+        "check paylane.retry_window_hours = 72, webhook.dedupe_ttl_hours = 72, redis.max_ttl_hours = 72"))
+    token = reply.body.rsplit("\nPremise-Clearance: ", 1)[1]
+    outcome = git_repo.commit(token)
+    assert outcome.returncode == 0, outcome.stderr
+
+
+def test_answerer_without_clearance_keeps_default_behavior():
+    from premise_switch.answer import Answerer
+    from switch_fakes import FakeTools, message
+
+    tools = FakeTools({"check_change": clear_result()})
+    reply = Answerer(tools, clock=lambda: 0).respond(message("check paylane.retry_window_hours = 72"))
+    assert reply.body.startswith("CLEAR_WITHIN_SCOPE\n") and "Premise-Clearance:" not in reply.body
+    assert reply.body.endswith("deterministic · graph rev 1")

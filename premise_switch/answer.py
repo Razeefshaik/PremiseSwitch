@@ -26,9 +26,10 @@ def content_terms(query: str) -> str:
 
 
 class Answerer:
-    def __init__(self, tools: ToolBackend, clock: Callable[[], float] = time.monotonic):
+    def __init__(self, tools: ToolBackend, clock: Callable[[], float] = time.monotonic, *, clearance=None):
         self.tools = tools
         self.clock = clock
+        self.clearance = clearance
         self._agent_replies: dict[tuple[str, str], deque[float]] = {}
         # Wiring uses to_thread: serialize admission and replies so concurrent calls
         # cannot overrun the per-room/thread budget.
@@ -68,23 +69,32 @@ class Answerer:
             return "search_evidence", self._call("search_evidence", {"query": query, "limit": 5})
         return name, self._call(name, args)
 
-    def _body(self, route: Route) -> str:
+    def _body(self, route: Route, *, room: str, thread: str) -> str:
         if route.name == "help":
-            return HELP + "\ndeterministic"
+            return escape(HELP + "\ndeterministic")
         name, result = self._execute(route)
         if name == "check_change" and result:
             # R_UNTRACKED must be handled before enrichment, including mixed checks.
             if any(reason.get("code") == "R_UNTRACKED" for reason in result.get("reasons", [])):
-                return format_check(result)
+                return escape(format_check(result))
             names = dict(result.get("names", {}))
             for decision in result.get("decisions", []):
                 lineage = self._call("decision_lineage", {"id": decision["id"]})
                 if lineage:
                     names.update(lineage.get("names", {}))
-            return format_check(result, names)
+            body = escape(format_check(result, names))
+            # Sign only a CLEAR result the existing conservative formatter accepts.
+            # Append after escaping so the opaque receipt is never modified.
+            if self.clearance is not None and body.split("\n", 1)[0] == "CLEAR_WITHIN_SCOPE":
+                receipt = self.clearance.issue(result, room=room, thread=thread, now=time.time())
+                if receipt is not None:
+                    if not isinstance(receipt, str) or not re.fullmatch(r"pc1\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+", receipt):
+                        raise ValueError("invalid clearance receipt")
+                    body += "\nPremise-Clearance: " + receipt
+            return body
         if name == "decision_lineage" and isinstance(result, dict):
             result = self._with_departed_names(result)
-        return format_result(name, result)
+        return escape(format_result(name, result))
 
     def _with_departed_names(self, lineage: dict[str, Any]) -> dict[str, Any]:
         """decision_lineage names only active people; "both owners left" needs the others too."""
@@ -138,9 +148,9 @@ class Answerer:
                 if message.sender_is_agent and not self._admit(message.room_id, thread_id):
                     return None
                 try:
-                    body = self._body(route)
+                    body = self._body(route, room=message.room_id, thread=thread_id)
                 except Exception:
                     body = UNAVAILABLE
-                return Reply(escape(body), thread_id, mention)
+                return Reply(body, thread_id, mention)
         except Exception:
             return Reply(UNAVAILABLE, thread_id, mention)
