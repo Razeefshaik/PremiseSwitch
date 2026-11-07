@@ -27,7 +27,8 @@ class Adapter:
 
     async def on_message(self, message: InboundMessage) -> None:
         """Never raises: one bad message must not stop the room's connection."""
-        if self.listener is not None:
+        # Commands to Premise are questions, not statements about the world, so never evidence.
+        if self.listener is not None and not message.addressed:
             try:
                 await asyncio.to_thread(self.listener.record, message)
                 self._schedule_listen()

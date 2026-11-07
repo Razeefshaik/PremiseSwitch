@@ -150,3 +150,15 @@ def test_new_message_during_a_run_gets_another_run_and_no_overlap():
         await a.aclose()
         return li.runs
     assert run(go()) == 2
+
+
+def test_addressed_commands_are_never_recorded_as_evidence():
+    async def go():
+        li = FakeListener()
+        a = Adapter(Echo(), li, FakeGateway(), debounce_seconds=0)
+        await a.on_message(message("@premise Paylane now retries for 72 hours"))
+        await asyncio.sleep(0.02)
+        await a.aclose()
+        return li
+    li = run(go())
+    assert li.records == [] and li.runs == 0
