@@ -1,8 +1,11 @@
-#!/usr/bin/env python
-"""Copy this standalone file to .git/hooks/commit-msg and make it executable.
-Requires Python, cryptography and PyYAML in the hook's interpreter environment.
-Verification matches premise_switch.clearance and is tested with real commits.
-"""
+#!/bin/sh
+''''exec "$(command -v python || command -v python3)" "$0" "$@" # '''
+# The line above is shell and Python at once: sh runs python, or python3 where there is no python (Ubuntu),
+# exists, and Python reads it as this module's docstring. Git runs hooks through sh
+# on Linux, macOS and Windows.
+# Copy this standalone file to .git/hooks/commit-msg and make it executable.
+# Requires Python, cryptography and PyYAML in the hook's interpreter environment.
+# Verification matches premise_switch.clearance and is tested with real commits.
 from __future__ import annotations
 import base64
 from dataclasses import dataclass
