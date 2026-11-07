@@ -1,5 +1,5 @@
 ---
-title: "Premise is your company's brain. Switch puts it in the chat."
+title: "Premise × Switch: your company's brain, in the chat."
 subtitle: "It listens, remembers why, and checks what a change would break"
 tags: [switch, agents, hackathon, python]
 ---
@@ -7,23 +7,33 @@ tags: [switch, agents, hackathon, python]
 <!-- Before publishing, replace relative image paths with the corresponding raw GitHub main URLs and replace ‹VIDEO LINK›. Film artwork and real footage are labelled separately. -->
 
 <div align="center">
-<img src="../media/switch-banner.png" alt="Premise × Switch: your company's brain, in the chat" width="100%">
-<br><sub>Film title artwork; the demos below use real Switch, Mattermost and terminal footage.</sub>
+<img src="../media/switch-blog-cover.png" alt="Premise × Switch: your company's brain, in the chat" width="100%">
+<br><sub>Light-theme cover illustration; the demos below use real Switch, Mattermost and terminal footage.</sub>
 </div>
 
 
-**Premise is your company's brain, and Switch puts it in the chat.**
+**Premise × Switch brings your company's brain into every team conversation.**
 
 It knows why, listens when things change, and checks what a change would break. Switch keeps the log. Premise keeps the meaning.
 
-![671 tests](https://img.shields.io/badge/tests-671-7cf0c8?style=flat&labelColor=030305)
-![286 Switch tests](https://img.shields.io/badge/Switch-286%20tests-5b63ff?style=flat&labelColor=030305)
-![0 gold floor failures](https://img.shields.io/badge/gold-0%20floor%20failures-7cf0c8?style=flat&labelColor=030305)
+![671 tests](https://img.shields.io/badge/tests-671-2ea043?style=flat&labelColor=555555)
+![286 Switch tests](https://img.shields.io/badge/Switch-286%20tests-2457e6?style=flat&labelColor=555555)
+![0 gold floor failures](https://img.shields.io/badge/gold-0%20floor%20failures-2ea043?style=flat&labelColor=555555)
 
-[Watch the demo](‹VIDEO LINK›) · [Read the code](https://github.com/Razeefshaik/PremiseSwitch)
+### Contents
+
+1. [The company brain](#the-company-brain)
+2. [Why it only works on Switch](#why-it-only-works-on-switch)
+3. [See it at Kestrel](#see-it-at-kestrel)
+4. [When people leave](#when-people-leave)
+5. [What else it does](#what-else-it-does)
+6. [What's next](#whats-next)
+7. [Run it yourself](#run-it-yourself)
+
+[Watch the demo](‹VIDEO LINK›) or [read the code](https://github.com/Razeefshaik/PremiseSwitch).
 
 <div align="center">
-<img src="../media/switch-guard.gif" alt="Premise checks a change before the coder edits" width="100%">
+<img src="../media/switch-guard.gif" alt="Premise × Switch checks a change before the coder edits" width="100%">
 <br><sub>Real Switch and Mattermost footage: a blocked change, the explanation and a checked fix.</sub>
 </div>
 
@@ -31,11 +41,11 @@ It knows why, listens when things change, and checks what a change would break. 
 
 A company writes down what it knows in decisions, policies, promises to customers, partner deals, config, tickets, chat, and the people behind them. The difficult part is keeping their relations: which promise rests on which policy, why a config value exists, and who understands it now.
 
-Premise reads and organises that material into a company brain. It knows the reasons behind a decision, connects them to the people and promises involved, and answers what-ifs before someone makes a change. In our fictional payments company, Kestrel, a partner deal includes Paylane's resend policy; the decision records and config explain what must outlast it.
+Premise × Switch reads and organises that material into a company brain. It knows the reasons behind a decision, connects them to the people and promises involved, and answers what-ifs before someone makes a change. In our fictional payments company, Kestrel, a partner deal includes Paylane's resend policy; the decision records and config explain what must outlast it.
 
 <div align="center">
-<img src="../media/switch-brain.png" alt="What Premise reads and organises: decisions, policies, promises and people" width="100%">
-<br><sub>Film illustration of the company brain; the room demos show the real integration.</sub>
+<img src="../media/switch-brain.gif" alt="Premise × Switch connects source material to the company brain" width="100%">
+<br><sub>Film excerpt: real company-brain web-app footage with animated source labels; the Switch room recordings appear below.</sub>
 </div>
 
 ## Why it only works on Switch
@@ -49,11 +59,23 @@ Premise hears the team (Listen), answers the agents (Guard), pages configured hu
 **Without Switch, the brain sits on a shelf. With Switch, it's in every conversation.**
 
 <div align="center">
-<img src="../media/switch-why.png" alt="People and AI agents share linked rooms with Premise present in each" width="100%">
-<br><sub>Film illustration of Switch rooms; Listen and Guard below are real room footage.</sub>
+<img src="../media/switch-why.gif" alt="Premise × Switch is present in each linked room" width="100%">
+<br><sub>Animated illustration from the film; the Listen and Guard demos below show real Switch and Mattermost footage.</sub>
+</div>
+
+### The Switch workflow
+
+<div align="center">
+<img src="../media/switch-flow.png" alt="Premise × Switch routes a room message through Switch and the company brain to a checked reply" width="100%">
+<br><sub>Light-theme protocol illustration, not chat footage; the room demos show the live integration.</sub>
 </div>
 
 ## See it at Kestrel
+
+<div align="center">
+<img src="../media/switch-modes.png" alt="Premise × Switch: Listen, Guard, Enforce and Remember with example commands" width="100%">
+<br><sub>Illustrated commands and outputs, not a transcript; real room and terminal footage follows.</sub>
+</div>
 
 ### One sentence in a chat room
 
@@ -164,20 +186,21 @@ Premise clearance refused: missing or duplicate Premise-Clearance trailer. Ask @
 
 The live answer to `@premise why ADR-012, and who owns it now?` returns the decision lineage with `path:line` citations, flags that its accountable owners, **Lena Fischer and Marco Ruiz**, have left, and lists reviewers. A suggested reviewer is not silently made the new owner.
 
-For **what if Anika leaves?**, the original Premise app has a **Continuity view at `/continuity`**. It shows which promises lose their verification and who reviews next. This is a web-app simulation, not a chat command, and it doesn't change the model.
+For **what if Anika leaves?**, the underlying web app has a **Continuity view at `/continuity`**. It shows which promises lose their verification and who reviews next. This is a web-app simulation, not a chat command, and it doesn't change the model.
 
 <div align="center">
-<img src="../media/switch-leave.png" alt="Departed owners and who can review next" width="100%">
-<br><sub>Film illustration of ownership continuity; the cited chat answer is live and the simulation lives in the web app.</sub>
+<img src="../media/switch-leave.gif" alt="Premise × Switch retains the reasons; Continuity simulates a departure in the web app" width="100%">
+<br><sub>Real Continuity web-app footage from the film: what changes if Anika leaves, with the next reviewers.</sub>
 </div>
 
 ## What else it does
 
-Premise predates this hackathon. Its web app offers cited answers, an Explorer, reviewer routing, what-if checks, a time machine for expiring attestations and Continuity. For the hackathon, we brought that company brain into Switch rooms.
+Built on **Premise**, our earlier company brain; this repo adds the Switch agent, room listening, checked replies and signed receipts. The underlying web app offers cited answers, an Explorer, reviewer routing, what-if checks, a time machine and Continuity.
 
-Underneath, it is a decision graph on FalkorDB. Decisions connect to guarantees, assumptions, facts, people, teams and sources. Deterministic tools follow those dependencies to check a proposed change. **No language model decides a Premise Switch verdict**, and the listener runs with `llm_provider="none"`.
+Underneath, it is a decision graph on FalkorDB. Decisions connect to guarantees, assumptions, facts, people, teams and sources. Deterministic tools follow those dependencies to check a proposed change. **No language model decides a Premise × Switch verdict**, and the listener runs with `llm_provider="none"`.
 
 ### What Switch taught us
+
 #### 1. One WebSocket per room, or you can't reply
 
 `post_message` has no room argument. It posts to the connection's single room, and a connection that covers several rooms fails when asked to post. The plain HTTP message endpoint takes a room but has no threads, and answers need threads.
@@ -240,6 +263,11 @@ The full suite is **671 tests**, 286 of them for the Switch integration, run aga
 A small team, directing several Codex agents in parallel. Each agent got a card naming the files it could touch, against frozen interfaces in `premise_switch/contracts.py`. Every branch was reviewed, tested on the server and merged with a `Merge Cxx` commit. The history keeps every working step, so the line between the original Premise (`f11f34e`) and the hackathon work (from `9769606`) is visible.
 
 ## What's next
+
+<div align="center">
+<img src="../media/switch-next.png" alt="Premise × Switch roadmap: business rules are next and not built yet" width="100%">
+<br><sub>Roadmap illustration, not footage: refund windows, pricing and partner terms are not implemented or tested.</sub>
+</div>
 
 **Business rules are next — not built yet.** A decision is a reason, an owner and a promise, so the same format fits business rules next: refund windows, pricing, partner terms. Those examples are roadmap ideas, not implemented or tested business rules.
 
