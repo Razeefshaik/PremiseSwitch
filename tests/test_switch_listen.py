@@ -141,7 +141,7 @@ def test_two_people_propose_once_then_restart(listeners, monkeypatch, capsys):
     body = notices[0].body
     assert "24 → 72" in body and "independent origins: 2" in body
     assert "Support: corroborated" in body and "contested: no" in body and "BLOCKED" in body
-    assert TEXT in body and "switch:payments:m1" in body and len(body) < 800
+    assert TEXT in body and "participant-alice: " in body and "switch:payments" not in body and len(body) < 800
     assert not listener.last_summary.drifts[0]["as_of_unknown"]
     assert listener.last_summary.extraction["model_calls"] == 0
     assert pipeline.llm_provider == "none" and pipeline.writer.github is None and pipeline.issue_github is None

@@ -108,7 +108,8 @@ class SwitchWorker:
         return {"offset": len(rows)}
 
 
-def _notice_body(drift: dict, proposal: dict, evidence: list[dict], room_keys: set[str]) -> str:
+def _notice_body(drift: dict, proposal: dict, evidence: list[dict], room_keys: set[str],
+                 people: dict[str, str] | None = None) -> str:
     support = [e for e in evidence if e["envelope_key"] in room_keys
                and e["status"] == "asserted" and e["value"] == drift["to"]]
     ignored = {e["envelope_key"] for e in evidence
@@ -118,7 +119,7 @@ def _notice_body(drift: dict, proposal: dict, evidence: list[dict], room_keys: s
             f"independent origins: {len(drift['origins'])}.\n"
             f"Ignored injection-like mentions: {len(ignored)}.\n"
             f"Verdict preview: **{proposal['verdict_preview']}**.\nEvidence: ")
-    body += "; ".join(f"{e['envelope_key']} — “{e['quote']}”" for e in support)
+    body += "; ".join(f"{(people or {}).get(e['envelope_key'], 'someone')}: “{e['quote']}”" for e in support)
     body = body.replace("@", "@\u200b")
     return body if len(body) < 800 else body[:798].rstrip("@") + "…"
 
@@ -184,11 +185,13 @@ class SwitchListener:
             raise RuntimeError("Switch pipeline evidence processing is incomplete")
 
         announced = {(row["room_id"], row["drift_key"]) for row in _read_jsonl(self._announced_path)}
-        rooms = {}
+        rooms, people = {}, {}
         # record() may append while the pipeline runs. Route every processed
         # supporting item, including arrivals collected after the initial read.
         for row in self.journal.messages():
-            rooms.setdefault(row["room_id"], set()).add(f"switch:{row['room_id']}:{row['message_id']}")
+            item = f"switch:{row['room_id']}:{row['message_id']}"
+            rooms.setdefault(row["room_id"], set()).add(item)
+            people[item] = row["sender_name"]
         drifts = {f"{d['fact']}={d['to']}": d for d in summary.drifts}
         notices = []
         for proposal in summary.proposals:
@@ -203,7 +206,7 @@ class SwitchListener:
             for room_id, room_keys in sorted(rooms.items()):
                 if (room_id, key) in announced or not supporting & room_keys:
                     continue
-                notice = ProposalNotice(room_id, key, _notice_body(drift, proposal, evidence, room_keys))
+                notice = ProposalNotice(room_id, key, _notice_body(drift, proposal, evidence, room_keys, people))
                 _append_jsonl(self._announced_path, {"room_id": room_id, "drift_key": key})
                 announced.add((room_id, key))
                 notices.append(notice)
