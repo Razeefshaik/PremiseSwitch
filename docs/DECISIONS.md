@@ -28,3 +28,7 @@ One row per design change, with its reason. Add a dated section per batch of wor
 | Version 1 group template with existing agent names and no kickoff | C05 | Accept | TEMPLATES.md confirms group, rooms, links, typed params and creator membership; compatible with the supplied 0.31.0 facts |
 | Copy fixtures into a new local Git repository with room-based agent instructions | C05 | Accept | Demo coders have Switch room access rather than the old MCP tool; no remote is added |
 | Standalone compose startup with bounded health polling and a checked Python 3.12+ venv | C05 | Accept | Reruns reuse the environment and never start the adapter or consume registration keys |
+| Doctor injects HTTP and GraphTools backends, reports only fixed text and known field names | C05 | Accept | Offline checks need no database and failure bodies cannot disclose keys |
+| Validate every documented op argument and reject undocumented required arguments | C05 | Accept | A renamed optional argument or new required argument breaks adapter calls across server versions |
+| Missing credentials warn and skip authenticated reads; empty registration key passes with state present | C05 | Accept | Registration is an owner action and the one-use key is removed after registration |
+| Read-only list_rooms uses the bare arguments POST; canonical guard uses in-process GraphTools | C05 | Accept | Discover rooms without connecting or changing server state, and never treat graph errors as safety |
