@@ -7,6 +7,7 @@ import json
 import logging
 import random
 from collections.abc import Callable
+from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import quote, urlencode, urlsplit, urlunsplit
 
@@ -14,7 +15,7 @@ import httpx
 from websockets.asyncio.client import connect
 from websockets.exceptions import ConnectionClosed, InvalidStatus
 
-from premise_switch.contracts import InboundMessage
+from premise_switch.contracts import InboundMessage, LinkedRoom, Reply
 from premise_switch.state import StateStore
 
 
@@ -72,6 +73,77 @@ class SwitchClient:
         self._rooms: dict[str, asyncio.Task] = {}
         self._room_names: dict[str, str] = {}
         self._participants: dict[str, list[dict[str, Any]]] = {}
+        self._document_locks: dict[tuple[str, str], asyncio.Lock] = {}
+
+    async def post(self, room_id: str, reply: Reply) -> str:
+        arguments: dict[str, Any] = {"body": reply.body, "thread_id": reply.thread_id}
+        operation = "post_message"
+        if reply.mention:
+            operation = "send_targeted_message"
+            arguments["target_names"] = list(reply.mention)
+        return (await self._op(operation, arguments, room_id))["event_id"]
+
+    async def history(self, room_id: str, limit: int = 50, since: str | None = None) -> list[InboundMessage]:
+        arguments: dict[str, Any] = {"room_id": room_id, "limit": limit}
+        if since is not None:
+            arguments["since"] = since
+        return await self._history_messages(room_id, await self._op("read_context", arguments, room_id))
+
+    async def upsert_document(self, room_id: str, name: str, description: str,
+                              instructions: str, content: str) -> str:
+        lock = self._document_locks.setdefault((room_id, name), asyncio.Lock())
+        async with lock:
+            documents = self.state.room(room_id)["documents"]
+            arguments = {"name": name, "description": description, "instructions": instructions, "content": content}
+            if name in documents:
+                await self._op("update_room_document", {"document_id": documents[name], **arguments}, room_id)
+            else:
+                result = await self._op("create_room_document", arguments, room_id)
+                documents[name] = result["document_id"]
+                self.state.save()
+            return documents[name]
+
+    async def linked_rooms(self, room_id: str) -> list[LinkedRoom]:
+        return [LinkedRoom(target_room_id=r["target_room_id"], target_room_name=r["target_room_name"],
+                           label=r["label"], is_member=r["access"] == "member")
+                for r in await self._op("list_linked_rooms", {}, room_id)]
+
+    async def _history_messages(self, room_id: str, result: dict[str, Any]) -> list[InboundMessage]:
+        messages = []
+        for thread in result["threads"]:
+            root = thread["root"]
+            entries = [(root, None)] + [(entry, root["id"]) for entry in thread.get("replies", [])]
+            for entry, thread_id in entries:
+                if entry.get("kind", "message") != "message":
+                    continue
+                payload = {**entry, "message_id": entry["id"], "thread_id": thread_id}
+                message = await self._normalise(room_id, payload, entry.get("sequence", 0), addressed=False)
+                if message is not None:
+                    messages.append(message)
+        return sorted(messages, key=lambda m: (m.timestamp_ms, m.message_id))
+
+    async def _backfill(self, room_id: str) -> None:
+        """Page the stored timeline fully before dispatching it in time order."""
+        messages: dict[str, InboundMessage] = {}
+        before: str | None = None
+        while True:
+            arguments: dict[str, Any] = {"room_id": room_id, "limit": 100}
+            if before is not None:
+                arguments["before"] = before
+            result = await self._op("read_context", arguments, room_id)
+            messages.update((m.message_id, m) for m in await self._history_messages(room_id, result))
+            if not result["truncated"]:
+                break
+            oldest = result["oldest_timestamp"]
+            if oldest is None:
+                raise ValueError("Truncated history has no pagination cursor")
+            next_before = datetime.fromtimestamp(oldest / 1000, UTC).isoformat(timespec="milliseconds")
+            if before is not None and next_before >= before:
+                raise ValueError("History pagination did not advance")
+            before = next_before
+        for message in sorted(messages.values(), key=lambda m: (m.timestamp_ms, m.message_id)):
+            if self.state.remember(room_id, message.message_id):
+                await self._callback(self.on_message, room_id, message)
 
     async def _op(self, operation: str, arguments: dict[str, Any], room_id: str | None = None) -> Any:
         headers = {}
@@ -192,6 +264,14 @@ class SwitchClient:
                 if room["cursor"] is None:
                     room["cursor"] = data.get("cursor", 0)
                 self.state.save()
+                if room.get("backfill_pending") is not None:
+                    queue.put_nowait({"event": "gap", "data": {"resumed_at": room["backfill_pending"]}})
+            elif event == "gap":
+                room = self.state.room(room_id)
+                room["backfill_pending"] = data["resumed_at"]
+                self.state.advance(room_id, data["resumed_at"])
+                self.state.save()
+                queue.put_nowait(frame)
             elif event == "evicted":
                 if data.get("code") in {"taken_over", "closed"}:
                     self._halt(room_id, data["code"])
@@ -216,6 +296,20 @@ class SwitchClient:
                     self._participants.pop(room_id, None)
                     if self.on_room_join is not None:
                         await self._callback(self.on_room_join, room_id, room_id, data)
+                elif frame["event"] == "gap":
+                    attempt = 0
+                    while not self._stop.is_set():
+                        try:
+                            await self._backfill(room_id)
+                            room = self.state.room(room_id)
+                            if room.get("backfill_pending") == data["resumed_at"]:
+                                room.pop("backfill_pending", None)
+                                self.state.save()
+                            break
+                        except (httpx.HTTPError, ValueError) as exc:
+                            logger.warning("backfill_failed room_id=%s exception_type=%s", room_id, type(exc).__name__)
+                            await self._wait(self._retry_delay(attempt))
+                            attempt += 1
                 self.state.advance(room_id, data.get("sequence", frame.get("id")))
             finally:
                 queue.task_done()

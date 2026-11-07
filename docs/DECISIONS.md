@@ -30,3 +30,8 @@ One row per design change, with its reason. Add a dated section per batch of wor
 - Persist terminal room stops for takeover, closure and permanent refusal; polling and process restarts must not silently reclaim an intentionally stopped room.
 - Resolve senders from room participants by id then name, and treat unknown types as agents; unverified identity must not become human evidence.
 - Disable only the private websocket transport logger, since library DEBUG frames and headers expose room text and credentials.
+- Pass only documented bare operation arguments and the room's connection header; use `document_id` from create responses and persist it under the document name to update after restarts.
+- Page gap history backwards using ISO timestamps, then deliver in chronological order with `addressed=False`; persist pending recovery and retry reads independently of heartbeats so a restart cannot forget the gap.
+- Serialize document creation per room/name in the client to prevent concurrent local upserts from creating duplicate documents.
+- Reserve message ids durably before invoking handlers to favor at-most-once reply attempts; a crash between reservation and callback completion cannot guarantee successful application delivery.
+- Room-join callbacks receive `(room_id, frame_data)` and share the ordered room worker, keeping the raw protocol data available without blocking heartbeats.

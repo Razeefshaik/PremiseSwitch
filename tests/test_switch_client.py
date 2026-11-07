@@ -3,14 +3,17 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import stat
 import threading
 from contextlib import asynccontextmanager
 
 import pytest
+import httpx
 
 from premise_switch.client import SwitchClient, register_once
+from premise_switch.contracts import LinkedRoom, Reply
 from premise_switch.state import StateStore
 from tests.fake_switch import FakeSwitch
 
@@ -239,6 +242,7 @@ async def test_sender_cache_refresh_self_filter_and_join_callback(tmp_path):
 
 @pytest.mark.asyncio
 async def test_handler_failure_logs_only_type_and_keeps_processing(tmp_path, caplog):
+    caplog.set_level(logging.DEBUG)
     seen = []
 
     async def handler(message):
@@ -278,6 +282,146 @@ def test_backoff_is_jittered_and_bounded():
     first = {SwitchClient._retry_delay(0) for _ in range(10)}
     assert len(first) > 1 and all(1 <= d <= 2 for d in first)
     assert all(1 <= SwitchClient._retry_delay(n) <= 30 for n in [1, 4, 9, 100])
+
+
+def history_entry(message_id, *, timestamp=1793000000000, sender="user-1", kind="message"):
+    return {"id": message_id, "kind": kind, "sender": sender, "sender_name": "Razeef",
+            "body": "private historical text", "timestamp": timestamp, "attachments": []}
+
+
+@pytest.mark.asyncio
+async def test_gateway_routes_threaded_posts_and_mentions_to_the_right_room(tmp_path):
+    with FakeSwitch() as server:
+        await server.add_room("room-2")
+        async with running_client(server, tmp_path, lambda m: None) as client:
+            await eventually(lambda: len(server.sockets) == 2)
+            plain_id = await client.post("room-1", Reply("plain body", thread_id="thread-1"))
+            targeted_id = await client.post("room-2", Reply("targeted body", "thread-2", ("coder.razeef",)))
+            assert plain_id != targeted_id
+            requests = [r for r in server.requests if r["operation"] in {"post_message", "send_targeted_message"}]
+            assert requests[0]["operation"] == "post_message"
+            assert requests[0]["arguments"] == {"body": "plain body", "thread_id": "thread-1"}
+            assert requests[1]["operation"] == "send_targeted_message"
+            assert requests[1]["arguments"] == {"body": "targeted body", "thread_id": "thread-2",
+                                                  "target_names": ["coder.razeef"]}
+            assert [r["connection_id"] for r in requests] == [client.state.room(r)["connection_id"]
+                                                                for r in ["room-1", "room-2"]]
+
+
+@pytest.mark.asyncio
+async def test_document_ids_are_reused_concurrently_and_after_restart(tmp_path):
+    with FakeSwitch() as server:
+        async with running_client(server, tmp_path, lambda m: None) as client:
+            first, second = await asyncio.gather(
+                client.upsert_document("room-1", "ledger", "description", "instructions", "first"),
+                client.upsert_document("room-1", "ledger", "description", "instructions", "second"))
+            assert first == second
+        async with running_client(server, tmp_path, lambda m: None) as client:
+            assert await client.upsert_document("room-1", "ledger", "changed", "instructions", "third") == first
+            requests = [r for r in server.requests if r["operation"] in {"create_room_document", "update_room_document"}]
+            assert [r["operation"] for r in requests] == ["create_room_document", "update_room_document", "update_room_document"]
+            assert requests[-1]["arguments"] == {"document_id": first, "name": "ledger", "description": "changed",
+                                                  "instructions": "instructions", "content": "third"}
+
+
+@pytest.mark.asyncio
+async def test_history_maps_roots_and_replies_and_linked_rooms(tmp_path):
+    with FakeSwitch() as server:
+        server.histories["room-1"] = [
+            {"root": history_entry("root"), "replies": [history_entry("reply", timestamp=1793000000001)]},
+            {"root": history_entry("self", sender="agent-1"), "replies": []},
+            {"root": history_entry("join", kind="room_join"), "replies": []}]
+        server.links["room-1"] = [
+            {"target_room_id": "r2", "target_room_name": "dev", "label": "implementation", "access": "member"},
+            {"target_room_id": "r3", "target_room_name": "ops", "label": "review", "access": "not_member"}]
+        async with running_client(server, tmp_path, lambda m: None) as client:
+            messages = await client.history("room-1", limit=25, since="2026-01-01T00:00:00Z")
+            assert [(m.message_id, m.thread_id) for m in messages] == [("root", None), ("reply", "root")]
+            assert all(not m.addressed and not m.sender_is_agent and m.sender_handle == "razeef" for m in messages)
+            assert messages[1].timestamp_ms == 1793000000001
+            assert await client.linked_rooms("room-1") == [LinkedRoom("r2", "dev", "implementation", True),
+                                                            LinkedRoom("r3", "ops", "review", False)]
+            request = next(r for r in server.requests if r["operation"] == "read_context")
+            assert request["arguments"] == {"room_id": "room-1", "limit": 25, "since": "2026-01-01T00:00:00Z"}
+
+
+@pytest.mark.asyncio
+async def test_gap_backfills_all_pages_silently_dedupes_and_keeps_pongs_live(tmp_path):
+    seen = []
+    with FakeSwitch() as server:
+        server.histories["room-1"] = [{"root": history_entry(f"history-{n:03}", timestamp=1793000000000+n),
+                                        "replies": []} for n in range(125)]
+        server.histories["room-1"].append({"root": history_entry("self", sender="agent-1"), "replies": []})
+        async with running_client(server, tmp_path, seen.append) as client:
+            await server.send_frame("room-1", server.message("history-000"))
+            await eventually(lambda: len(seen) == 1)
+            await server.gap("room-1", 200)
+            await eventually(lambda: len(seen) == 125, timeout=10)
+            await eventually(lambda: client.state.room("room-1").get("backfill_pending") is None)
+            assert client.state.room("room-1")["cursor"] == 200
+            assert seen[0].addressed
+            assert all(not m.addressed for m in seen[1:])
+            assert len({m.message_id for m in seen}) == 125
+            assert [m.message_id for m in seen[1:]] == [f"history-{n:03}" for n in range(1, 125)]
+            reads = [r for r in server.requests if r["operation"] == "read_context"]
+            assert len(reads) == 2 and "before" in reads[1]["arguments"]
+            assert len(server.connections) == 1
+            await server.send_frame("room-1", server.message("after-gap"))
+            await eventually(lambda: len(seen) == 126)
+            assert seen[-1].addressed
+            assert client.state.room("room-1")["cursor"] == 200
+
+
+@pytest.mark.asyncio
+async def test_gap_retries_history_failure_without_delaying_heartbeats(tmp_path):
+    seen = []
+    with FakeSwitch() as server:
+        server.histories["room-1"] = [{"root": history_entry("missed"), "replies": []}]
+        async with running_client(server, tmp_path, seen.append) as client:
+            original = client._op
+            failures = []
+
+            async def fail_once(operation, arguments, room_id=None):
+                if operation == "read_context" and not failures:
+                    failures.append(True)
+                    raise httpx.ConnectError("private historical text")
+                return await original(operation, arguments, room_id)
+
+            client._op = fail_once
+            await server.gap("room-1", 30)
+            await eventually(lambda: bool(failures))
+            assert StateStore(tmp_path).room("room-1")["backfill_pending"] == 30
+            await eventually(lambda: len(seen) == 1)
+            assert not seen[0].addressed
+            assert len(server.connections) == 1 and len(server.pongs) >= 3
+
+
+@pytest.mark.asyncio
+async def test_pending_gap_is_recovered_on_process_restart(tmp_path):
+    state = StateStore(tmp_path)
+    state.set_agent("agent-1", "fake-agent-secret")
+    state.room("room-1").update(cursor=50, backfill_pending=50)
+    state.save()
+    seen = []
+    with FakeSwitch() as server:
+        server.histories["room-1"] = [{"root": history_entry("missed"), "replies": []}]
+        async with running_client(server, tmp_path, seen.append) as client:
+            await eventually(lambda: len(seen) == 1)
+            assert not seen[0].addressed
+            assert client.state.room("room-1")["cursor"] == 50
+            assert client.state.room("room-1").get("backfill_pending") is None
+
+
+@pytest.mark.asyncio
+async def test_fake_rejects_undocumented_operation_arguments(tmp_path):
+    with FakeSwitch() as server:
+        async with running_client(server, tmp_path, lambda m: None) as client:
+            with pytest.raises(httpx.HTTPStatusError) as error:
+                await client._op("post_message", {"body": "hi", "room_id": "room-1"}, "room-1")
+            assert error.value.response.status_code == 400
+            with pytest.raises(httpx.HTTPStatusError) as error:
+                await client._op("send_targeted_message", {"thread_id": "root"}, "room-1")
+            assert error.value.response.status_code == 400
 
 
 @pytest.mark.asyncio

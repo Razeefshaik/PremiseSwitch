@@ -141,6 +141,9 @@ class FakeSwitch:
         def read(room):
             from datetime import datetime
             entries = self.histories.get(room_id or room, [])
+            if since:
+                cutoff = int(datetime.fromisoformat(since).timestamp() * 1000)
+                entries = [t for t in entries if t["root"]["timestamp"] >= cutoff]
             if before:
                 cutoff = int(datetime.fromisoformat(before).timestamp() * 1000)
                 entries = [t for t in entries if t["root"]["timestamp"] < cutoff]
