@@ -27,3 +27,4 @@ One row per design change, with its reason. Add a dated section per batch of wor
 | --- | --- | --- | --- |
 | Version 1 group template with existing agent names and no kickoff | C05 | Accept | TEMPLATES.md confirms group, rooms, links, typed params and creator membership; compatible with the supplied 0.31.0 facts |
 | Copy fixtures into a new local Git repository with room-based agent instructions | C05 | Accept | Demo coders have Switch room access rather than the old MCP tool; no remote is added |
+| Standalone compose startup with bounded health polling and a checked Python 3.12+ venv | C05 | Accept | Reruns reuse the environment and never start the adapter or consume registration keys |

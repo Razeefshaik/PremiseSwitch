@@ -1,5 +1,4 @@
 """Reproduction checks: no live Switch server or graph required."""
-import importlib.util
 from pathlib import Path
 import shutil
 import subprocess
@@ -41,6 +40,8 @@ def test_prepare_demo(tmp_path, monkeypatch):
     assert git("remote", "-v") == ""
     assert git("branch", "--show-current") == "main"
     assert git("rev-list", "--count", "HEAD") == "1"
+
+
     for name in ("AGENTS.md", "CLAUDE.md"):
         text = (dest / name).read_text()
         assert "@premise" in text and "config/" in text and "Never merge" in text
@@ -50,3 +51,11 @@ def test_prepare_demo(tmp_path, monkeypatch):
     assert result.returncode != 0
     assert "already exists" in result.stderr
     assert git("rev-list", "--count", "HEAD") == "1"
+
+
+def test_up_shell_syntax():
+    bash = shutil.which("bash")
+    if bash is None:
+        pytest.skip("bash is not available")
+    result = subprocess.run([bash, "-n", "scripts/up.sh"], cwd=ROOT, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
