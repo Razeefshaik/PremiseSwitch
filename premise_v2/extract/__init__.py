@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+import unicodedata
 from dataclasses import asdict, dataclass
 
 from ..envelope import Envelope
@@ -36,7 +37,32 @@ FROM_TO = re.compile(rf"\bfrom\s+(?P<old>\d+(?:\.\d+)?)\s*(?P<old_unit>{UNIT_ALT
 # A decimal point is part of a number, not a sentence boundary.
 SENTENCE = re.compile(r"(?:[^.!?\n]|(?<=\d)\.(?=\d))+(?:[.!?]+|$)", re.M)
 
-INSTRUCTION = re.compile(r"\b(ignore (?:all |any )?(?:previous|prior|above) instructions|disregard|you must|system prompt)\b", re.I)
+_INSTRUCTION = re.compile(r"\b(ignore (?:all |any )?(?:previous|prior|above) instructions|disregard|you must|system prompt)\b", re.I)
+# Invisible characters an attacker can put inside a marker word: zero-width spaces and joiners,
+# direction marks and overrides, word joiners, the BOM and soft hyphens.
+_INVISIBLE = re.compile("[­​-‏‪-‮⁠-⁤﻿]")
+_SPACES = re.compile(r"\s+")
+
+
+def security_view(text: str) -> str:
+    """Text as a security check should see it. NFKC folds look-alike forms and turns
+    non-breaking spaces into spaces; invisible characters are dropped. Only the checks use
+    this view: grounding and citations keep the original text and offsets."""
+    return _SPACES.sub(" ", _INVISIBLE.sub("", unicodedata.normalize("NFKC", text)))
+
+
+class _SecurityPattern:
+    """INSTRUCTION matches against security_view(text), so a zero-width space or a
+    non-breaking space inside "ignore previous instructions" can't hide it."""
+
+    def __init__(self, pattern: re.Pattern):
+        self.pattern = pattern
+
+    def search(self, text: str):
+        return self.pattern.search(security_view(text))
+
+
+INSTRUCTION = _SecurityPattern(_INSTRUCTION)
 HEDGE = re.compile(r"\b(imagine|maybe|might|could|would|perhaps|possibly|probably|rumou?r|suppose|lol|lmao|haha|jk|"
                    r"not sure|i think|i guess|if)\b|\?\s*$", re.I)
 NEGATION = re.compile(r"\b(not|never|no longer)\b|n't\b", re.I)
