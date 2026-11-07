@@ -11,7 +11,7 @@ The missing context was ADR-012. Paymentservice had stopped keeping its own idem
 
 Switch is a collaboration system where people and agents work together in rooms. It connects agents to room conversations, including conversations bridged from tools such as Mattermost.
 
-As recorded in `docs/HANDOFF.md`, Switch gives an agent its room's context, rather than every other room's conversation. That boundary makes sense, but decisions made elsewhere still constrain today's code. Chat, tickets and architecture decision records contain the reasons; remembering which reasons still matter is another job.
+Switch gives an agent its room's context, rather than every other room's conversation; `docs/HANDOFF.md` records that documented boundary. It makes sense, but decisions made elsewhere still constrain today's code. Chat, tickets and architecture decision records contain the reasons; remembering which reasons still matter is another job.
 
 ## Bring the decision graph into the room
 
@@ -23,7 +23,7 @@ No language model decides anything in Premise's answers. `premise_switch/answer.
 
 We gave Premise four jobs.
 
-**Answer.** Ask `@premise why ADR-012, and who owns it now?` and it returns decision lineage, source citations and the ownership gap. Lena and Marco are recorded as departed in `sandbox/kestrel-platform/company/people.yaml`. Reviewers are separate from accountable owners: suggesting someone to review a change doesn't silently appoint a replacement owner.
+**Answer.** Ask `@premise why ADR-012, and who owns it now?` and it returns decision lineage, source citations and the ownership gap. The decision lives at `sandbox/kestrel-platform/adr/ADR-012.md`; Lena and Marco are recorded as departed in `sandbox/kestrel-platform/company/people.yaml`. Replies cite evidence as `path:line`. Reviewers are separate from accountable owners: suggesting someone to review a change doesn't silently appoint a replacement owner.
 
 **Guard.** Ask `@premise check paylane.retry_window_hours = 72`. The reply includes the failing dependency chain, affected decisions, reviewers and a verified fix. Here is an abridged rendering:
 
@@ -31,7 +31,7 @@ We gave Premise four jobs.
 BLOCKED
 G_CHARGE_ONCE → G_DEDUPE → A_RETRY_WINDOW
 Affected decisions: ADR-007, ADR-012, ADR-015, ADR-018
-Reviewers: Jun Park, Anika Rao
+ADR-012 reviewers: Jun Park, Anika Rao
 Verified fix (include the original proposed changes too):
 webhook.dedupe_ttl_hours = 72
 redis.max_ttl_hours = 72
@@ -51,7 +51,7 @@ Premise-Clearance: <signed receipt omitted>
 
 `premise_switch/clearance.py` signs canonical JSON containing the exact file, key and value changes, graph revision, issuance time, room and thread. The private key stays on the server; the coder's repository receives only the public key at `.premise/clearance.pub`. Repository access alone therefore doesn't let the coder forge the server's signature.
 
-The standalone `demo/hooks/commit-msg` compares the receipt with changes between HEAD and the staged index. It checks what will be committed, including value types, rather than trusting the working tree. Missing, mismatched, expired or tampered receipts are refused. This depends on a trusted hook and public-key installation; a local hook can be bypassed.
+The standalone `demo/hooks/commit-msg` requires a matching receipt for commits changing `config/`. It compares changes between HEAD and the staged index, including value types, rather than trusting the working tree. Missing, mismatched, expired or tampered receipts are refused. This depends on a trusted hook and public-key installation; a local hook can be bypassed.
 
 **Listen.** Ordinary human messages become evidence through `premise_switch/listen.py`. Two different people independently reporting “Paylane now retries for 72 hours” can produce a proposal to update the model, with a BLOCKED verdict preview. Two replies in one thread count as one origin, so our demo uses separate top-level messages.
 
@@ -143,7 +143,7 @@ The full template puts Premise in both rooms and the selected coding agent in `k
 
 We worked as a small team directing several Codex agents in parallel. Each worker had a card naming the files it could touch, against frozen interfaces in `premise_switch/contracts.py`. Branches went through review and VM testing, then `Merge Cxx` commits. The history preserves the working steps rather than hiding them in one final snapshot.
 
-The reported full-suite checkpoint for this integration was 568 tests. `.github/workflows/tests.yml` runs the full suite and extraction gold evaluation on pushes and pull requests, including merges. That evaluation replays frozen recordings; it doesn't require live model calls. Premise's existing graph engine and fixtures predate this event; the Switch integration is the work we added here.
+At the reported integration checkpoint, the full suite passed 568 tests. `.github/workflows/tests.yml` runs the full suite and extraction gold evaluation on pushes and pull requests, including merges. That evaluation replays frozen recordings; it doesn't require live model calls. Premise's existing graph engine and fixtures predate this event; the Switch integration is the work we added here.
 
 Next we want server-side receipt checks, because `--no-verify` bypasses local hooks and repository access permits changing local enforcement. The current offline verifier also doesn't recheck the live graph revision. More sources should bring more decision evidence into the same review process, while keeping uncertainty explicit.
 
