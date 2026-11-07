@@ -98,3 +98,16 @@ One row per design change, with its reason. Add a dated section per batch of wor
 - Leave `__main__.py` and `adapter.py` to Claude; contracts version 1.1.0 documents exact issuer construction, public-key export and README installation text without modifying runtime wiring or the README outside this card's ownership.
 - Use Git's literal pathspec mode for every hook lookup: a failing real-commit regression showed `[abc].yaml` incorrectly selected `a.yaml` as well, making a valid signed change look unmerged.
 - Final clone-local validation, without a database or services: `python -m pytest -q -rP tests/test_switch_clearance.py tests/test_switch_answer.py` reports `154 passed in 45.03s`, including real hook accept/refuse commits, issuer-to-Answerer-to-hook round trips, deletions and index/worktree separation.
+## 2026-11-07 C07 extras
+
+| Decision | By | Status | Reason |
+| --- | --- | --- | --- |
+| Async ledger uses RoomGateway upsert by a fixed name, serializes each room, and retains newest rows in memory | C07 | Accept | The client owns document IDs; concurrent records must not lose rows or create duplicates, while history persistence is outside this helper's contract |
+| Cap ledger at 100 rows and 16000 UTF-8 bytes, trim old rows and bound escaped cells | C07 | Accept | Stay below Switch's documented 1 MiB room-document content limit even with multibyte text; neutralize mentions and table markup |
+| Ledger failures return false and log only exception type | C07 | Accept | Optional document updates must not interrupt a verdict or leak exception bodies |
+| Human mentions come only from the caller's SWITCH_REVIEWER_HANDLES allowlist; escape graph display names and reject broadcast handles | C07 | Accept | Graph text cannot invent a target or wake an agent; the owner must configure only human usernames |
+| Pure intro text plus a join helper accepts Premise ID or name, reserving a caller-supplied seen set before posting | C07 | Accept | Matches both live join identity forms and suppresses repeated join attempts per room without adding wiring |
+| Related-room hints disclose only member links and escape names and labels | C07 | Accept | Do not expose inaccessible rooms or turn link metadata into agent mentions |
+| Seed exactly three top-level Mattermost posts as human 1, human 2, human 1, with three seconds between posts and no retries | C07 | Accept | Independent origins need separate people and threads; repeated writes could change the evidence |
+| Seed dry-run returns before reading credentials or constructing HTTP; live errors print exception types only | C07 | Accept | Preview works offline, tokens and response bodies never reach script output, and redirects cannot forward credentials |
+| Test both demo claims with the real extractor and bundled aliases; verify the third is instruction-tainted | C07 | Accept | Establish deterministic extraction without a database or changing Listen's already attributed notices |
