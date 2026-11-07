@@ -26,3 +26,6 @@ One row per design change, with its reason. Add a dated section per batch of wor
 | Decision | By | Status | Reason |
 | --- | --- | --- | --- |
 | Parse whole assignments with a bounded scalar grammar and mark explicit commands separately | C03 | Accept | Reject ambiguous or malformed changes; free-form fallback must remain silent for agents |
+| Bound summaries to 1500 characters, preserving verdict, footer, and a whole verified fix alternative | C03 | Accept | Truncation must not erase the verdict or turn a partial remedy into pasteable advice |
+| Render only path:line citations and escape every graph-text mention with a zero-width space | C03 | Accept | Replies should cite local evidence without waking agents through echoed graph content |
+| Treat any untracked reason as unchecked even when a result claims clear | C03 | Accept | Mixed proposals cannot establish safety outside the tracked scope |

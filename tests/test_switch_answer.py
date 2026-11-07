@@ -38,3 +38,69 @@ def test_routes(text, name, args, explicit):
 def test_parse_errors(text):
     with pytest.raises(ParseError):
         parse(text)
+
+
+from premise_switch.format import format_check, format_result
+
+
+def blocked_result():
+    return {"verdict": "BLOCKED", "graph_rev": 1,
+            "not_holding": [{"id": "G_CHARGE_ONCE", "status": "broken",
+                             "chain": ["G_CHARGE_ONCE", "G_DEDUPE", "A_RETRY_WINDOW"]}],
+            "decisions": [{"id": "ADR-012", "reviewers": ["p_jun", "p_anika"]}],
+            "verified_fixes": [{"changes": {"webhook.dedupe_ttl_hours": 72, "redis.max_ttl_hours": 72}}]}
+
+
+def test_blocked_format_and_pasteable_fix():
+    body = format_check(blocked_result(), {"p_jun": "Jun Park", "p_anika": "Anika Rao"})
+    assert body.startswith("BLOCKED\n")
+    assert "G_CHARGE_ONCE → G_DEDUPE → A_RETRY_WINDOW" in body
+    assert "ADR-012" in body and "Jun Park" in body and "Anika Rao" in body
+    fix = body.split("```text\n")[1].split("\n```")[0]
+    assert parse(fix).arguments == {"changes": [
+        {"fact": "webhook.dedupe_ttl_hours", "value": 72}, {"fact": "redis.max_ttl_hours", "value": 72}]}
+    assert body.endswith("deterministic · graph rev 1")
+
+
+def test_format_four_chains_and_overflow_count():
+    result = blocked_result()
+    result["not_holding"] *= 6
+    body = format_check(result)
+    assert body.count("- G_CHARGE_ONCE:") == 4
+    assert "and 2 more" in body
+    assert "p_jun" in body  # Unknown names remain honest person ids.
+
+
+def test_length_limit_preserves_verdict_footer_and_whole_fix():
+    result = blocked_result()
+    result["not_holding"] = [{"id": "G_LONG", "status": "broken", "chain": ["A_" + "X" * 70] * 15}] * 10
+    body = format_check(result)
+    assert len(body) <= 1500 and body.splitlines()[0] == "BLOCKED"
+    assert body.endswith("deterministic · graph rev 1")
+    assert "webhook.dedupe_ttl_hours = 72" in body and "redis.max_ttl_hours = 72" in body
+
+
+def test_unknown_and_untracked_never_format_as_clear():
+    assert "unchecked" in format_check({"verdict": "ERROR"})
+    body = format_check({"verdict": "CLEAR_WITHIN_SCOPE", "reasons": [{"code": "R_UNTRACKED"}]})
+    assert body.startswith("NEEDS_REVIEW\n") and "isn't tracked" in body
+    assert "CLEAR_WITHIN_SCOPE" not in body
+
+
+def test_citations_and_departed_owners_and_escaped_graph_names():
+    body = format_result("decision_lineage", {
+        "decision": {"id": "ADR-012", "title": "@coder.razeef"}, "active_accountable": [],
+        "unavailable": ["p_old"], "reviewers": ["p_jun"], "names": {"p_jun": "Jun @coder.razeef"},
+        "sources": [{"path": "docs/adr.md", "line": 12, "url": "https://example.com/adr"}]})
+    assert "No active accountable owner" in body and "Departed" in body
+    assert "docs/adr.md:12" in body and "https://" not in body
+    assert "@coder.razeef" not in body and "@\u200bcoder.razeef" in body
+
+
+def test_fix_alternatives_are_not_combined_or_partially_truncated():
+    result = blocked_result()
+    result["verified_fixes"].append({"changes": {"other.key": 8}})
+    assert "other.key" not in format_check(result)
+    result["verified_fixes"] = [{"changes": {"big.key": "x" * 2000}}]
+    body = format_check(result)
+    assert len(body) <= 1500 and "no partial fix" in body and "big.key =" not in body
